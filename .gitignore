@@ -1,0 +1,32 @@
+# --- Security (CRITICAL) ---
+.env
+.env*.local
+.env.production
+.env.development
+*.pem
+
+# --- Python / Backend ---
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+backend/venv/
+
+# --- Node / Frontend ---
+node_modules/
+.next/
+out/
+build/
+dist/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# --- Docker ---
+# Ignore standard docker-compose overrides people often use locally
+docker-compose.override.yml
+
+# --- System Junk ---
+.DS_Store
+Thumbs.db

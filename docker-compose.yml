@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  # Python Backend Service
+  backend:
+    build: ./backend
+    container_name: gxktm_backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app  # Syncs your local folder to the container
+    env_file:
+      - .env
+
+  # Next.js Frontend Service
+  frontend:
+    build: ./frontend
+    container_name: gxktm_frontend
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app      # Syncs your local folder
+      - /app/node_modules    # Prevents local node_modules from overriding container's
+    environment:
+      - WATCHPACK_POLLING=true # Helps Docker see file changes on some systems
+    depends_on:
+      - backend
