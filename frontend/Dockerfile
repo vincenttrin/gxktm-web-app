@@ -1,17 +1,20 @@
-# Use an official lightweight Node image
-FROM node:20-alpine
+# Use the official lightweight Node.js image
+FROM node:22-alpine
 
+# Set the working directory inside the container
 WORKDIR /app
 
-# Install dependencies based on package.json
-COPY package*.json ./
+# Copy package files first (to cache dependencies)
+COPY package.json package-lock.json* ./
+
+# Install dependencies
 RUN npm install
 
-# Copy the rest of the application
+# Copy the rest of the application code
 COPY . .
 
-# Expose the port Next.js runs on
+# Expose Port 3000 to the host
 EXPOSE 3000
 
-# Start the dev server
+# Start the application in development mode
 CMD ["npm", "run", "dev"]
