@@ -56,8 +56,8 @@ export default function StudentForm ({ onSuccess, onCancel }: StudentFormProps) 
   };
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 p-4 z-50">
-      <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl text-black">
+    <div className="fixed inset-0 flex items-center justify-center bg-black/20 backdrop-blur-sm p-4 z-50">
+      <div className="w-full max-w-md rounded-lg bg-white/95 backdrop-blur-md p-6 shadow-xl text-black border border-white/20">
         <h2 className="mb-4 text-xl font-bold">Register New Student</h2>
         
         <form onSubmit={handleSubmit} className="space-y-4">

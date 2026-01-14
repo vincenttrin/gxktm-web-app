@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Program } from "./types";
 import StudentForm from "./components/StudentForm";
-import { MOCK_PROGRAMS } from "../lib/mockData";
+// import { MOCK_PROGRAMS } from "../lib/mockData";
 
 export default function Home() {
   const [programs, setPrograms] = useState<Program[]>([]);
@@ -14,10 +14,10 @@ export default function Home() {
     // This function fetches the data when the page loads
     const fetchData = async () => {
       try {
-        setPrograms(MOCK_PROGRAMS);
-        // const res = await fetch("http://localhost:8000/programs");
-        // const data = await res.json();
-        // setPrograms(data);
+        // setPrograms(MOCK_PROGRAMS);
+        const res = await fetch("http://localhost:8000/programs");
+        const data = await res.json();
+        setPrograms(data);
       } catch (error) {
         console.error("Failed to fetch programs:", error);
       } finally {
@@ -31,7 +31,7 @@ export default function Home() {
   if (loading) {
     return (
       <div className="flex h-screen items-center justify-center bg-gray-50">
-        <p className="text-xl font-semibold text-gray-500">Loading Sunday School Data...</p>
+        <p className="text-xl font-semibold text-gray-500">Loading GXKTM Data...</p>
       </div>
     );
   }
@@ -41,7 +41,7 @@ export default function Home() {
       <div className="mx-auto max-w-5xl">
         <header className="mb-8 flex items-center justify-between border-b pb-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Sunday School Dashboard</h1>
+            <h1 className="text-3xl font-bold text-gray-900">GXKTM Dashboard</h1>
             <p className="text-gray-600">Overview of Programs and Classes</p>
           </div>
           <div>
