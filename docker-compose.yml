@@ -19,7 +19,10 @@ services:
     volumes:
       - ./frontend:/app      # Syncs your local folder
       - /app/node_modules    # Prevents local node_modules from overriding container's
+    env_file:
+      - .env
     environment:
       - WATCHPACK_POLLING=true # Helps Docker see file changes on some systems
+      - WATCHMAN_AGGREGATE_TIMEOUT=50
     depends_on:
       - backend

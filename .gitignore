@@ -23,6 +23,10 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
+# Root package files (ignored as requested)
+/package.json
+/package-lock.json
+
 # --- Docker ---
 # Ignore standard docker-compose overrides people often use locally
 docker-compose.override.yml
