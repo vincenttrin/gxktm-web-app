@@ -1,3 +1,4 @@
+import os
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware  # <--- NEW IMPORT
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -12,10 +13,8 @@ app = FastAPI()
 
 # --- 1. SETUP CORS ---
 # This allows your Next.js app (http://localhost:3000) to talk to this API
-origins = [
-    "http://localhost:3000",
-    "http://localhost",
-]
+raw_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000")
+origins = [origin.strip() for origin in raw_origins.split(",")]
 
 app.add_middleware(
     CORSMiddleware,

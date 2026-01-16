@@ -15,9 +15,9 @@ export default function StudentForm ({ onSuccess, onCancel }: StudentFormProps) 
 
   // Form state
   const [formData, setFormData] = useState({
-    firstName: "",
-    middleName: "",
-    lastName: "",
+    first_name: "",
+    middle_name: "",
+    last_name: "",
     date_of_birth: "",
     allergies: "",
     gender: ""
@@ -42,6 +42,7 @@ export default function StudentForm ({ onSuccess, onCancel }: StudentFormProps) 
       ...formData,
       class_ids
     };
+    console.log(class_ids);
 
     try {
       const response = await fetch("http://localhost:8000/students", {
@@ -77,8 +78,8 @@ export default function StudentForm ({ onSuccess, onCancel }: StudentFormProps) 
               required
               type="text"
               className="mt-1 w-full rounded border p-2"
-              value={formData.firstName}
-              onChange={(e) => setFormData({...formData, firstName: e.target.value})}
+              value={formData.first_name}
+              onChange={(e) => setFormData({...formData, first_name: e.target.value})}
             />
           </div>
           <div>
@@ -86,8 +87,8 @@ export default function StudentForm ({ onSuccess, onCancel }: StudentFormProps) 
             <input
               type="text"
               className="mt-1 w-full rounded border p-2"
-              value={formData.middleName}
-              onChange={(e) => setFormData({...formData, middleName: e.target.value})}
+              value={formData.middle_name}
+              onChange={(e) => setFormData({...formData, middle_name: e.target.value})}
             />
           </div>
           <div>
@@ -96,8 +97,8 @@ export default function StudentForm ({ onSuccess, onCancel }: StudentFormProps) 
               required
               type="text"
               className="mt-1 w-full rounded border p-2"
-              value={formData.lastName}
-              onChange={(e) => setFormData({...formData, lastName: e.target.value})}
+              value={formData.last_name}
+              onChange={(e) => setFormData({...formData, last_name: e.target.value})}
             />
           </div>
 
