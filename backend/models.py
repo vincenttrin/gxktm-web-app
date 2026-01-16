@@ -47,6 +47,9 @@ class Student(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     first_name = Column(String)
     last_name = Column(String)
+    middle_name = Column(String, nullable=True)
+    allergies = Column(Text, nullable=True)
+    gender = Column(String, nullable=True)
     date_of_birth = Column(Date)
     
     enrollments = relationship("Enrollment", back_populates="student")
