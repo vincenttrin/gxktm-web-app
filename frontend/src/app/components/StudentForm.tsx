@@ -11,15 +11,16 @@ interface StudentFormProps {
 export default function StudentForm ({ onSuccess, onCancel }: StudentFormProps) {
   const [programs, setPrograms] = useState<Program[]>([]);
   const [loading, setLoading] = useState(false);
+  const [selectedClasses, setSelectedClasses] = useState<Record<number, string>>({});
 
   // Form state
   const [formData, setFormData] = useState({
-    firstName: "",
-    lastName: "",
+    first_name: "",
+    middle_name: "",
+    last_name: "",
     date_of_birth: "",
     allergies: "",
-    gender: "",
-    class_id: ""
+    gender: ""
   });
 
   // 1. Fetch Classes for the dropdown
@@ -35,13 +36,21 @@ export default function StudentForm ({ onSuccess, onCancel }: StudentFormProps) 
     e.preventDefault();
     setLoading(true);
 
+    const class_ids = Object.values(selectedClasses).filter(Boolean);
+    
+    const payload = {
+      ...formData,
+      class_ids
+    };
+    console.log(class_ids);
+
     try {
       const response = await fetch("http://localhost:8000/students", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) throw new Error("Failed to create student");
@@ -57,33 +66,40 @@ export default function StudentForm ({ onSuccess, onCancel }: StudentFormProps) 
 
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-black/20 backdrop-blur-sm p-4 z-50">
-      <div className="w-full max-w-md rounded-lg bg-white/95 backdrop-blur-md p-6 shadow-xl text-black border border-white/20">
+      <div className="w-full max-w-md rounded-lg bg-white/95 backdrop-blur-md p-6 shadow-xl text-black border border-white/20 max-h-[90vh] overflow-y-auto">
         <h2 className="mb-4 text-xl font-bold">Register New Student</h2>
         
         <form onSubmit={handleSubmit} className="space-y-4">
           
           {/* Name Fields */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700">First Name</label>
-              <input
-                required
-                type="text"
-                className="mt-1 w-full rounded border p-2"
-                value={formData.firstName}
-                onChange={(e) => setFormData({...formData, firstName: e.target.value})}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Last Name</label>
-              <input
-                required
-                type="text"
-                className="mt-1 w-full rounded border p-2"
-                value={formData.lastName}
-                onChange={(e) => setFormData({...formData, lastName: e.target.value})}
-              />
-            </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">First Name*</label>
+            <input
+              required
+              type="text"
+              className="mt-1 w-full rounded border p-2"
+              value={formData.first_name}
+              onChange={(e) => setFormData({...formData, first_name: e.target.value})}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Middle Name</label>
+            <input
+              type="text"
+              className="mt-1 w-full rounded border p-2"
+              value={formData.middle_name}
+              onChange={(e) => setFormData({...formData, middle_name: e.target.value})}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Last Name*</label>
+            <input
+              required
+              type="text"
+              className="mt-1 w-full rounded border p-2"
+              value={formData.last_name}
+              onChange={(e) => setFormData({...formData, last_name: e.target.value})}
+            />
           </div>
 
           {/* DOB */}
@@ -98,27 +114,36 @@ export default function StudentForm ({ onSuccess, onCancel }: StudentFormProps) 
             />
           </div>
 
-          {/* Class Selection Dropdown */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Assign to Class</label>
-            <select
-              required
-              className="mt-1 w-full rounded border p-2 bg-white"
-              value={formData.class_id}
-              onChange={(e) => setFormData({...formData, class_id: e.target.value})}
-            >
-              <option value="">-- Select a Class --</option>
-              {programs.map((prog) => (
-                <optgroup key={prog.id} label={prog.name}>
+          {/* DYNAMIC PROGRAM LOOP */}
+          {/* This renders a dropdown for EVERY program in your database automatically */}
+          <div className="space-y-3">
+            <h3 className="font-semibold text-gray-800">Program Enrollment</h3>
+            {programs.map((prog) => (
+              <div key={prog.id}>
+                <label className="block text-sm font-medium text-gray-700">
+                  {prog.name}
+                </label>
+                <select
+                  className="mt-1 w-full rounded border p-2 bg-white"
+                  value={selectedClasses[prog.id] || ""}
+                  onChange={(e) => 
+                    setSelectedClasses({
+                      ...selectedClasses, 
+                      [prog.id]: e.target.value
+                    })
+                  }
+                >
+                  <option value="">-- No Enrollment --</option>
                   {prog.classes.map((cls) => (
                     <option key={cls.id} value={cls.id}>
                       {cls.name}
                     </option>
                   ))}
-                </optgroup>
-              ))}
-            </select>
+                </select>
+              </div>
+            ))}
           </div>
+
 
            {/* Allergies */}
           <div>
@@ -131,6 +156,21 @@ export default function StudentForm ({ onSuccess, onCancel }: StudentFormProps) 
               onChange={(e) => setFormData({...formData, allergies: e.target.value})}
             />
           </div>
+
+            {/* Gender */}
+            <div>
+            <label className="block text-sm font-medium text-gray-700">Gender (Optional)</label>
+            <select
+              className="mt-1 w-full rounded border p-2 bg-white"
+              value={formData.gender}
+              onChange={(e) => setFormData({...formData, gender: e.target.value})}
+            >
+              <option value="">-- Select --</option>
+              <option value="Male">Male</option>
+              <option value="Female">Female</option>
+              <option value="Prefer not to say">Prefer not to say</option>
+            </select>
+            </div>
 
           {/* Buttons */}
           <div className="flex justify-end gap-3 pt-4">

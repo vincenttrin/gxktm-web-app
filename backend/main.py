@@ -1,3 +1,4 @@
+import os
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware  # <--- NEW IMPORT
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -5,16 +6,15 @@ from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
 from database import get_db
-from models import Program, Class # Import your models
+from models import Program, Student, Enrollment # Import your models
+from schemas import StudentCreate  # Import your Pydantic schemas
 
 app = FastAPI()
 
 # --- 1. SETUP CORS ---
 # This allows your Next.js app (http://localhost:3000) to talk to this API
-origins = [
-    "http://localhost:3000",
-    "http://localhost",
-]
+raw_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000")
+origins = [origin.strip() for origin in raw_origins.split(",")]
 
 app.add_middleware(
     CORSMiddleware,
@@ -42,3 +42,25 @@ async def get_programs(db: AsyncSession = Depends(get_db)):
     )
     programs = result.scalars().all()
     return programs
+
+@app.post("/students")
+async def create_student(student: StudentCreate, db: AsyncSession = Depends(get_db)):
+    new_student = Student(
+        first_name=student.first_name,
+        last_name=student.last_name,
+        middle_name=student.middle_name,
+        date_of_birth=student.date_of_birth,
+        allergies=student.allergies,
+        gender=student.gender
+    )
+    db.add(new_student)
+    await db.flush()  # Ensure new_student.id is populated
+    print(f"Creating student with ID: {new_student.id}")
+    for c_id in student.class_ids:
+        enrollment = Enrollment(
+            student_id=new_student.id,
+            class_id=c_id
+        )
+        db.add(enrollment)
+    await db.commit()
+    return {"status": "success", "student_id": new_student.id}
