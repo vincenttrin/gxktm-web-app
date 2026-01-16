@@ -54,6 +54,8 @@ async def create_student(student: StudentCreate, db: AsyncSession = Depends(get_
         gender=student.gender
     )
     db.add(new_student)
+    await db.flush()  # Ensure new_student.id is populated
+    print(f"Creating student with ID: {new_student.id}")
     for c_id in student.class_ids:
         enrollment = Enrollment(
             student_id=new_student.id,

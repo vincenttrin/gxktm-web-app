@@ -9,4 +9,5 @@ class StudentCreate(BaseModel):
     last_name: str
     date_of_birth: date
     allergies: Optional[str] = None
+    gender: Optional[str] = None
     class_ids: List[UUID] = []
