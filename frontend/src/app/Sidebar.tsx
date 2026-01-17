@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, LayoutDashboard, Settings, Menu } from "lucide-react";
+import { Home, LayoutDashboard, Settings, Menu, LogOut } from "lucide-react";
+import { signout } from "@/app/(auth)/login/actions";
 
 export default function Sidebar() {
   const pathname = usePathname();
@@ -42,6 +43,18 @@ export default function Sidebar() {
             );
           })}
         </nav>
+
+        <div className="mt-auto p-2">
+          <button
+            onClick={() => signout()}
+            className="flex w-full items-center p-3 rounded hover:bg-sky-400 transition-colors whitespace-nowrap text-left"
+          >
+            <LogOut className="w-6 h-6 min-w-[24px]" />
+            <span className="ml-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+              Sign Out
+            </span>
+          </button>
+        </div>
       </div>
     </div>
   );

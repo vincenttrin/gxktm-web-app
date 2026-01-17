@@ -36,9 +36,16 @@ export async function signup(formData: FormData) {
   })
 
   if (error) {
-    redirect('/login?error=Could not authenticate user')
+    redirect('/signup?error=Could not authenticate user')
   }
 
   revalidatePath('/', 'layout')
   redirect('/login?message=Check email to continue sign in process')
+}
+
+export async function signout() {
+  const supabase = await createClient()
+  await supabase.auth.signOut()
+  revalidatePath('/', 'layout')
+  redirect('/login')
 }

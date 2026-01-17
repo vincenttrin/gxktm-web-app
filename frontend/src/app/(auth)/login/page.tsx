@@ -1,23 +1,24 @@
-import { login, signup } from './actions'
+import { login } from './actions'
+import Link from 'next/link'
+import { SubmitButton } from './submit-button'
 
 export default async function LoginPage(props: {
   searchParams: Promise<{ message: string; error: string }>
 }) {
   const searchParams = await props.searchParams
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="w-full max-w-md space-y-8">
+    <>
         <div>
           <h2 className="mt-6 text-center text-3xl font-bold tracking-tight text-gray-900">
             Sign in to your account
           </h2>
           {searchParams?.message && (
-            <p className="mt-2 text-center text-sm text-green-600 font-medium">
+            <p className="mt-2 text-center text-sm text-green-600 font-medium bg-green-50 p-3 rounded-md border border-green-200">
               {searchParams.message}
             </p>
           )}
           {searchParams?.error && (
-            <p className="mt-2 text-center text-sm text-red-600 font-medium">
+            <p className="mt-2 text-center text-sm text-red-600 font-medium bg-red-50 p-3 rounded-md border border-red-200">
               {searchParams.error}
             </p>
           )}
@@ -52,22 +53,30 @@ export default async function LoginPage(props: {
             </div>
           </div>
 
+          <div className="flex items-center justify-end mb-4">
+            <Link href="/forgot-password" className="text-sm font-semibold text-blue-600 hover:text-blue-500">
+              Forgot password?
+            </Link>
+          </div>
+
           <div className="flex flex-col gap-4">
-            <button
+            <SubmitButton
               formAction={login}
-              className="group relative flex w-full justify-center rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
+              className="group relative flex w-full justify-center rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+              pendingText="Signing In..."
             >
               Sign in
-            </button>
-            <button
-              formAction={signup}
-              className="group relative flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 mb-2"
-            >
-              Sign up
-            </button>
+            </SubmitButton>
+            
+            <div className="text-center text-sm">
+              <span className="text-gray-500">Don&apos;t have an account? </span>
+              <Link href="/signup" className="font-semibold text-blue-600 hover:text-blue-500">
+                Sign up
+              </Link>
+            </div>
           </div>
         </form>
-      </div>
-    </div>
+    </>
   )
 }
+
