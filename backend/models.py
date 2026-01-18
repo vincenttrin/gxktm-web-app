@@ -1,6 +1,7 @@
 import uuid
-from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, Date, Text
-from sqlalchemy.dialects.postgresql import UUID  # <--- SPECIAL POSTGRES TYPE
+from datetime import datetime
+from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, Date, Text, DateTime
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from database import Base
 
@@ -11,15 +12,57 @@ class AcademicYear(Base):
     name = Column(String) 
     is_current = Column(Boolean, default=False)
 
-# 2. Profile
-class Profile(Base):
-    __tablename__ = "profiles"
-    # User ID from Supabase is a UUID, so we must match it
-    id = Column(UUID(as_uuid=True), primary_key=True) 
-    full_name = Column(String)
-    role = Column(String, default="parent")
+# 2. Family - Main unit for authentication and information management
+class Family(Base):
+    __tablename__ = "families"
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    family_name = Column(String)  # e.g., "Smith Family"
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    guardians = relationship("Guardian", back_populates="family", cascade="all, delete-orphan")
+    emergency_contacts = relationship("EmergencyContact", back_populates="family", cascade="all, delete-orphan")
+    students = relationship("Student", back_populates="family")
 
-    guardianships = relationship("StudentGuardian", back_populates="guardian")
+# 3. Guardian (Parent/Guardian)
+class Guardian(Base):
+    __tablename__ = "guardians"
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    family_id = Column(UUID(as_uuid=True), ForeignKey("families.id"), nullable=False)
+    first_name = Column(String, nullable=False)
+    last_name = Column(String, nullable=False)
+    email = Column(String, nullable=False, unique=True, index=True)
+    phone = Column(String)
+    relationship_to_student = Column(String)  # e.g., "Mother", "Father", "Guardian"
+    is_primary = Column(Boolean, default=False)  # Indicates primary contact
+    
+    family = relationship("Family", back_populates="guardians")
+
+# 4. Emergency Contact
+class EmergencyContact(Base):
+    __tablename__ = "emergency_contacts"
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    family_id = Column(UUID(as_uuid=True), ForeignKey("families.id"), nullable=False)
+    first_name = Column(String, nullable=False)
+    last_name = Column(String, nullable=False)
+    email = Column(String)
+    phone = Column(String, nullable=False)
+    relationship = Column(String)  # e.g., "Aunt", "Grandmother", "Friend"
+    
+    family = relationship("Family", back_populates="emergency_contacts")
+
+# 5. Magic Link for authentication
+class MagicLink(Base):
+    __tablename__ = "magic_links"
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    email = Column(String, nullable=False, index=True)
+    token = Column(String, unique=True, nullable=False, index=True)
+    family_id = Column(UUID(as_uuid=True), ForeignKey("families.id"))
+    created_at = Column(DateTime, default=datetime.utcnow)
+    expires_at = Column(DateTime, nullable=False)
+    used = Column(Boolean, default=False)
+    used_at = Column(DateTime)
 
 # 3. Program
 class Program(Base):
