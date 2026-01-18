@@ -33,7 +33,8 @@ export default async function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        {isAuthenticated && <Sidebar />}
+        {/* {isAuthenticated && <Sidebar />} */}
+        {/* <Sidebar /> */}
         <main className={isAuthenticated ? "ml-16" : ""}>
           {children}
         </main>

@@ -16,11 +16,11 @@ SEED_DATA = [
     },
     {
         "name": "Viet Ngu",
-        "classes": ["Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6", "Grade 7", "Grade 8", "Grade 9"]
+        "classes": ["Viet Ngu 1", "Viet Ngu 2", "Viet Ngu 3", "Viet Ngu 4", "Viet Ngu 5", "Viet Ngu 6", "Viet Ngu 7", "Viet Ngu 8", "Viet Ngu 9"]
     },
     {
         "name": "Giao Ly",
-        "classes": ["Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6", "Grade 7", "Grade 8", "Grade 9"]
+        "classes": ["Giao Ly 1", "Giao Ly 2", "Giao Ly 3", "Giao Ly 4", "Giao Ly 5", "Giao Ly 6", "Giao Ly 7", "Giao Ly 8", "Giao Ly 9"]
     }
 ]
 

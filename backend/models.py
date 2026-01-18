@@ -17,8 +17,13 @@ class Family(Base):
     __tablename__ = "families"
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     family_name = Column(String)  # e.g., "Smith Family"
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    address = Column(String)
+    city = Column(String)
+    state = Column(String)
+    zip_code = Column(String)
+    diocese_id = Column(String, nullable=True)  # Optional diocese identifier
+    # created_at = Column(DateTime, default=datetime.utcnow)
+    # updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # Relationships
     guardians = relationship("Guardian", back_populates="family", cascade="all, delete-orphan")
@@ -33,9 +38,8 @@ class Guardian(Base):
     first_name = Column(String, nullable=False)
     last_name = Column(String, nullable=False)
     email = Column(String, nullable=False, unique=True, index=True)
-    phone = Column(String)
-    relationship_to_student = Column(String)  # e.g., "Mother", "Father", "Guardian"
-    is_primary = Column(Boolean, default=False)  # Indicates primary contact
+    phone = Column(String, nullable=False)
+    relationship_to_family = Column(String)  # e.g., "Mother", "Father", "Guardian"
     
     family = relationship("Family", back_populates="guardians")
 
@@ -46,23 +50,11 @@ class EmergencyContact(Base):
     family_id = Column(UUID(as_uuid=True), ForeignKey("families.id"), nullable=False)
     first_name = Column(String, nullable=False)
     last_name = Column(String, nullable=False)
-    email = Column(String)
+    email = Column(String, nullable=True)
     phone = Column(String, nullable=False)
-    relationship = Column(String)  # e.g., "Aunt", "Grandmother", "Friend"
+    relationship_to_family = Column(String)  # e.g., "Aunt", "Grandmother", "Friend"
     
     family = relationship("Family", back_populates="emergency_contacts")
-
-# 5. Magic Link for authentication
-class MagicLink(Base):
-    __tablename__ = "magic_links"
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    email = Column(String, nullable=False, index=True)
-    token = Column(String, unique=True, nullable=False, index=True)
-    family_id = Column(UUID(as_uuid=True), ForeignKey("families.id"))
-    created_at = Column(DateTime, default=datetime.utcnow)
-    expires_at = Column(DateTime, nullable=False)
-    used = Column(Boolean, default=False)
-    used_at = Column(DateTime)
 
 # 3. Program
 class Program(Base):
@@ -88,15 +80,19 @@ class Class(Base):
 class Student(Base):
     __tablename__ = "students"
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    family_id = Column(UUID(as_uuid=True), ForeignKey("families.id"))
     first_name = Column(String)
     last_name = Column(String)
     middle_name = Column(String, nullable=True)
-    allergies = Column(Text, nullable=True)
-    gender = Column(String, nullable=True)
+    saint_name = Column(String, nullable=True)
     date_of_birth = Column(Date)
+    gender = Column(String, nullable=True)
+    grade_level = Column(Integer, nullable=True)
+    american_school = Column(String, nullable=True)
+    notes = Column(Text, nullable=True)
     
     enrollments = relationship("Enrollment", back_populates="student")
-    guardians = relationship("StudentGuardian", back_populates="student")
+    family = relationship("Family", back_populates="students")
 
 # 6. Link Tables
 class Enrollment(Base):
@@ -108,11 +104,3 @@ class Enrollment(Base):
     
     student = relationship("Student", back_populates="enrollments")
     assigned_class = relationship("Class", back_populates="enrollments")
-
-class StudentGuardian(Base):
-    __tablename__ = "student_guardians"
-    student_id = Column(UUID(as_uuid=True), ForeignKey("students.id"), primary_key=True)
-    guardian_id = Column(UUID(as_uuid=True), ForeignKey("profiles.id"), primary_key=True)
-    
-    student = relationship("Student", back_populates="guardians")
-    guardian = relationship("Profile", back_populates="guardianships")
