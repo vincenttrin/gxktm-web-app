@@ -6,7 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
 from database import get_db
-from models import Program, Student, Enrollment # Import your models
+from models import Program, Student, Enrollment, Family # Import your models
 
 
 app = FastAPI()
@@ -42,6 +42,17 @@ async def get_programs(db: AsyncSession = Depends(get_db)):
     )
     programs = result.scalars().all()
     return programs
+
+@app.get("/families")
+async def get_families(db: AsyncSession = Depends(get_db)):
+    result = await db.execute(
+        select(Family).options(
+            selectinload(Family.guardians),
+            selectinload(Family.students)
+        )
+    )
+    families = result.scalars().all()
+    return families
 
 # @app.post("/students")
 # async def create_student(student: StudentCreate, db: AsyncSession = Depends(get_db)):
