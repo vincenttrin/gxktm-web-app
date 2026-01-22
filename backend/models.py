@@ -35,10 +35,9 @@ class Guardian(Base):
     __tablename__ = "guardians"
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     family_id = Column(UUID(as_uuid=True), ForeignKey("families.id"), nullable=False)
-    first_name = Column(String, nullable=False)
-    last_name = Column(String, nullable=False)
-    email = Column(String, nullable=False, unique=True, index=True)
-    phone = Column(String, nullable=False)
+    name = Column(String, nullable=False)
+    email = Column(String, unique=True, index=True)
+    phone = Column(String)
     relationship_to_family = Column(String)  # e.g., "Mother", "Father", "Guardian"
     
     family = relationship("Family", back_populates="guardians")
@@ -48,9 +47,8 @@ class EmergencyContact(Base):
     __tablename__ = "emergency_contacts"
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     family_id = Column(UUID(as_uuid=True), ForeignKey("families.id"), nullable=False)
-    first_name = Column(String, nullable=False)
-    last_name = Column(String, nullable=False)
-    email = Column(String, nullable=True)
+    name = Column(String, nullable=False)
+    email = Column(String, index=True)
     phone = Column(String, nullable=False)
     relationship_to_family = Column(String)  # e.g., "Aunt", "Grandmother", "Friend"
     

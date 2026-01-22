@@ -1,15 +1,16 @@
 import os
 from fastapi import FastAPI, Depends
-from fastapi.middleware.cors import CORSMiddleware  # <--- NEW IMPORT
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
 from database import get_db
-from models import Program, Student, Enrollment, Family # Import your models
+from models import Program, Student, Enrollment, Family
+from routers.families import router as families_router, academic_year_router
 
 
-app = FastAPI()
+app = FastAPI(title="Sunday School Admin API", version="1.0.0")
 
 # --- 1. SETUP CORS ---
 # This allows your Next.js app (http://localhost:3000) to talk to this API
@@ -23,6 +24,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# --- Include Routers ---
+app.include_router(families_router)
+app.include_router(academic_year_router)
+
 
 @app.get("/")
 def read_root():
