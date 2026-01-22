@@ -145,8 +145,91 @@ class AcademicYearBase(BaseModel):
     is_current: bool = False
 
 
+class AcademicYearCreate(AcademicYearBase):
+    pass
+
+
 class AcademicYearResponse(AcademicYearBase):
     id: int
 
     class Config:
         from_attributes = True
+
+
+# --- Program Schemas ---
+class ProgramBase(BaseModel):
+    name: str
+
+
+class ProgramCreate(ProgramBase):
+    pass
+
+
+class ProgramResponse(ProgramBase):
+    id: int
+
+    class Config:
+        from_attributes = True
+
+
+# --- Class Schemas ---
+class ClassBase(BaseModel):
+    name: str
+    program_id: int
+    academic_year_id: int
+
+
+class ClassCreate(ClassBase):
+    pass
+
+
+class ClassUpdate(BaseModel):
+    name: Optional[str] = None
+    program_id: Optional[int] = None
+    academic_year_id: Optional[int] = None
+
+
+class ClassResponse(ClassBase):
+    id: UUID
+    program: Optional[ProgramResponse] = None
+
+    class Config:
+        from_attributes = True
+
+
+class ClassWithEnrollmentCount(ClassResponse):
+    enrollment_count: int = 0
+
+
+# --- Enrollment Schemas ---
+class EnrollmentBase(BaseModel):
+    student_id: UUID
+    class_id: UUID
+
+
+class EnrollmentCreate(EnrollmentBase):
+    pass
+
+
+class StudentWithFamily(StudentBase):
+    id: UUID
+    family_id: UUID
+    family_name: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class EnrollmentResponse(BaseModel):
+    id: UUID
+    student_id: UUID
+    class_id: UUID
+    student: Optional[StudentWithFamily] = None
+
+    class Config:
+        from_attributes = True
+
+
+class ClassWithEnrollments(ClassResponse):
+    enrollments: List[EnrollmentResponse] = []
+    enrollment_count: int = 0

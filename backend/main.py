@@ -8,6 +8,7 @@ from sqlalchemy.orm import selectinload
 from database import get_db
 from models import Program, Student, Enrollment, Family
 from routers.families import router as families_router, academic_year_router
+from routers.classes import router as classes_router, program_router
 
 
 app = FastAPI(title="Sunday School Admin API", version="1.0.0")
@@ -28,6 +29,8 @@ app.add_middleware(
 # --- Include Routers ---
 app.include_router(families_router)
 app.include_router(academic_year_router)
+app.include_router(classes_router)
+app.include_router(program_router)
 
 
 @app.get("/")
@@ -37,28 +40,6 @@ def read_root():
 @app.get("/health")
 def health_check():
     return {"status": "ok"}
-
-# --- 2. NEW ENDPOINT: Get All Programs & Classes ---
-@app.get("/programs")
-async def get_programs(db: AsyncSession = Depends(get_db)):
-    # specific query that "eager loads" the classes for each program
-    # This prevents the "N+1" query problem
-    result = await db.execute(
-        select(Program).options(selectinload(Program.classes))
-    )
-    programs = result.scalars().all()
-    return programs
-
-@app.get("/families")
-async def get_families(db: AsyncSession = Depends(get_db)):
-    result = await db.execute(
-        select(Family).options(
-            selectinload(Family.guardians),
-            selectinload(Family.students)
-        )
-    )
-    families = result.scalars().all()
-    return families
 
 # @app.post("/students")
 # async def create_student(student: StudentCreate, db: AsyncSession = Depends(get_db)):

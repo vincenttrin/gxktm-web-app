@@ -11,6 +11,13 @@ import {
   EmergencyContact,
   EmergencyContactCreate,
   AcademicYear,
+  Program,
+  ClassItem,
+  ClassWithEnrollments,
+  ClassCreate,
+  ClassUpdate,
+  ClassQueryParams,
+  Enrollment,
 } from '@/types/family';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
@@ -236,6 +243,105 @@ export async function getCurrentAcademicYear(): Promise<AcademicYear> {
   });
   
   return handleResponse<AcademicYear>(response);
+}
+
+// --- Program API ---
+
+export async function getPrograms(): Promise<Program[]> {
+  const response = await fetch(`${API_BASE_URL}/api/programs`, {
+    cache: 'no-store',
+  });
+  
+  return handleResponse<Program[]>(response);
+}
+
+// --- Class API ---
+
+export async function getClasses(params: ClassQueryParams = {}): Promise<ClassItem[]> {
+  const searchParams = new URLSearchParams();
+  
+  if (params.academic_year_id) {
+    searchParams.set('academic_year_id', params.academic_year_id.toString());
+  }
+  if (params.program_id) {
+    searchParams.set('program_id', params.program_id.toString());
+  }
+  
+  const response = await fetch(
+    `${API_BASE_URL}/api/classes?${searchParams.toString()}`,
+    { cache: 'no-store' }
+  );
+  
+  return handleResponse<ClassItem[]>(response);
+}
+
+export async function getClass(classId: string): Promise<ClassWithEnrollments> {
+  const response = await fetch(`${API_BASE_URL}/api/classes/${classId}`, {
+    cache: 'no-store',
+  });
+  
+  return handleResponse<ClassWithEnrollments>(response);
+}
+
+export async function createClass(data: ClassCreate): Promise<ClassItem> {
+  const response = await fetch(`${API_BASE_URL}/api/classes`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  
+  return handleResponse<ClassItem>(response);
+}
+
+export async function updateClass(classId: string, data: ClassUpdate): Promise<ClassItem> {
+  const response = await fetch(`${API_BASE_URL}/api/classes/${classId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  
+  return handleResponse<ClassItem>(response);
+}
+
+export async function deleteClass(classId: string): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/api/classes/${classId}`, {
+    method: 'DELETE',
+  });
+  
+  return handleResponse<void>(response);
+}
+
+// --- Enrollment API ---
+
+export async function enrollStudent(
+  classId: string,
+  studentId: string
+): Promise<Enrollment> {
+  const response = await fetch(`${API_BASE_URL}/api/classes/${classId}/enrollments`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ student_id: studentId, class_id: classId }),
+  });
+  
+  return handleResponse<Enrollment>(response);
+}
+
+export async function unenrollStudent(
+  classId: string,
+  studentId: string
+): Promise<void> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/classes/${classId}/enrollments/${studentId}`,
+    { method: 'DELETE' }
+  );
+  
+  return handleResponse<void>(response);
+}
+
+// --- Export API ---
+
+export function getClassExportUrl(classId: string): string {
+  return `${API_BASE_URL}/api/classes/${classId}/export/csv`;
 }
 
 export { ApiError };

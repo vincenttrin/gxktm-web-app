@@ -107,6 +107,61 @@ export interface AcademicYear {
   is_current: boolean;
 }
 
+// Program Types
+export interface Program {
+  id: number;
+  name: string;
+}
+
+// Class Types
+export interface ClassItem {
+  id: string;
+  name: string;
+  program_id: number;
+  academic_year_id: number;
+  program: Program | null;
+  enrollment_count?: number;
+}
+
+export interface StudentWithFamily {
+  id: string;
+  family_id: string;
+  first_name: string;
+  last_name: string;
+  middle_name: string | null;
+  saint_name: string | null;
+  date_of_birth: string;
+  gender: string | null;
+  grade_level: number | null;
+  american_school: string | null;
+  notes: string | null;
+  family_name: string | null;
+}
+
+export interface Enrollment {
+  id: string;
+  student_id: string;
+  class_id: string;
+  student: StudentWithFamily | null;
+}
+
+export interface ClassWithEnrollments extends ClassItem {
+  enrollments: Enrollment[];
+  enrollment_count: number;
+}
+
+export interface ClassCreate {
+  name: string;
+  program_id: number;
+  academic_year_id: number;
+}
+
+export interface ClassUpdate {
+  name?: string;
+  program_id?: number;
+  academic_year_id?: number;
+}
+
 // API Query Parameters
 export interface FamilyQueryParams {
   page?: number;
@@ -114,4 +169,9 @@ export interface FamilyQueryParams {
   search?: string;
   sort_by?: string;
   sort_order?: 'asc' | 'desc';
+}
+
+export interface ClassQueryParams {
+  academic_year_id?: number;
+  program_id?: number;
 }

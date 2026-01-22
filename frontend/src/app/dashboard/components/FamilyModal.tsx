@@ -267,7 +267,7 @@ export default function FamilyModal({
                       value={familyName}
                       onChange={(e) => setFamilyName(e.target.value)}
                       placeholder="e.g., Smith Family"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-gray-700"
                     />
                   </div>
 
@@ -280,7 +280,7 @@ export default function FamilyModal({
                       value={address}
                       onChange={(e) => setAddress(e.target.value)}
                       placeholder="Street address"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-gray-700"
                     />
                   </div>
 
@@ -294,7 +294,7 @@ export default function FamilyModal({
                         value={city}
                         onChange={(e) => setCity(e.target.value)}
                         placeholder="City"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-gray-700"
                       />
                     </div>
                     <div>
@@ -306,7 +306,7 @@ export default function FamilyModal({
                         value={state}
                         onChange={(e) => setState(e.target.value)}
                         placeholder="State"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-gray-700"
                       />
                     </div>
                     <div>
@@ -318,7 +318,7 @@ export default function FamilyModal({
                         value={zipCode}
                         onChange={(e) => setZipCode(e.target.value)}
                         placeholder="ZIP"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-gray-700"
                       />
                     </div>
                   </div>
@@ -332,7 +332,7 @@ export default function FamilyModal({
                       value={dioceseId}
                       onChange={(e) => setDioceseId(e.target.value)}
                       placeholder="Diocese identifier"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-gray-700"
                     />
                   </div>
                 </div>
@@ -366,7 +366,7 @@ export default function FamilyModal({
                             updateGuardian(index, 'name', e.target.value)
                           }
                           placeholder="Full name *"
-                          className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                          className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-gray-700"
                           required
                         />
                         <input
@@ -376,7 +376,7 @@ export default function FamilyModal({
                             updateGuardian(index, 'relationship_to_family', e.target.value)
                           }
                           placeholder="Relationship (e.g., Mother)"
-                          className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                          className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-gray-700"
                         />
                         <input
                           type="email"
@@ -385,7 +385,7 @@ export default function FamilyModal({
                             updateGuardian(index, 'email', e.target.value)
                           }
                           placeholder="Email"
-                          className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                          className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-gray-700"
                         />
                         <input
                           type="tel"
@@ -394,7 +394,7 @@ export default function FamilyModal({
                             updateGuardian(index, 'phone', e.target.value)
                           }
                           placeholder="Phone"
-                          className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                          className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-gray-700"
                         />
                       </div>
                     </div>
@@ -439,7 +439,7 @@ export default function FamilyModal({
                             updateStudent(index, 'first_name', e.target.value)
                           }
                           placeholder="First name *"
-                          className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                          className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-gray-700"
                           required
                         />
                         <input
@@ -449,7 +449,7 @@ export default function FamilyModal({
                             updateStudent(index, 'middle_name', e.target.value)
                           }
                           placeholder="Middle name"
-                          className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                          className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-gray-700"
                         />
                         <input
                           type="text"
@@ -458,7 +458,7 @@ export default function FamilyModal({
                             updateStudent(index, 'last_name', e.target.value)
                           }
                           placeholder="Last name *"
-                          className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                          className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-gray-700"
                           required
                         />
                         <input
@@ -468,7 +468,7 @@ export default function FamilyModal({
                             updateStudent(index, 'saint_name', e.target.value)
                           }
                           placeholder="Saint name"
-                          className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                          className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-gray-700"
                         />
                         <input
                           type="date"
@@ -476,7 +476,7 @@ export default function FamilyModal({
                           onChange={(e) =>
                             updateStudent(index, 'date_of_birth', e.target.value)
                           }
-                          className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                          className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-gray-700"
                           required
                         />
                         <select
@@ -484,7 +484,7 @@ export default function FamilyModal({
                           onChange={(e) =>
                             updateStudent(index, 'gender', e.target.value)
                           }
-                          className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white"
+                          className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white text-gray-700"
                         >
                           <option value="">Gender</option>
                           <option value="Male">Male</option>
@@ -501,7 +501,7 @@ export default function FamilyModal({
                             )
                           }
                           placeholder="Grade level"
-                          className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                          className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-gray-700"
                         />
                         <input
                           type="text"
@@ -510,7 +510,7 @@ export default function FamilyModal({
                             updateStudent(index, 'american_school', e.target.value)
                           }
                           placeholder="School"
-                          className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none col-span-2"
+                          className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-gray-700 col-span-2"
                         />
                       </div>
                       <textarea
@@ -520,7 +520,7 @@ export default function FamilyModal({
                         }
                         placeholder="Notes"
                         rows={2}
-                        className="mt-3 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none resize-none"
+                        className="mt-3 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none resize-none text-gray-700"
                       />
                     </div>
                   ))}
