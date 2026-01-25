@@ -5,25 +5,60 @@ import {
   EnrollmentWizardState,
   EnrollmentStep,
   EnrollmentFamily,
+  EnrollmentGuardian,
+  EnrollmentStudent,
+  EnrollmentEmergencyContact,
   EnrollmentClass,
   StudentEnrollmentSuggestion,
-  SelectedEnrollment,
   AcademicYear,
+  Program,
+  ClassSelection,
+  FormState,
+  ChangesSummary,
 } from '@/types/enrollment';
+
+// Initial form state
+const createInitialFormState = (): FormState => ({
+  family: {
+    family_name: null,
+    address: null,
+    city: null,
+    state: null,
+    zip_code: null,
+    diocese_id: null,
+    guardians: [],
+    students: [],
+    emergency_contacts: [],
+  },
+  guardians: [],
+  children: [],
+  emergencyContacts: [],
+  classSelections: [],
+  validation: {
+    family: { isValid: true, errors: {} },
+    guardians: { isValid: true, errors: {} },
+    children: { isValid: true, errors: {} },
+    emergencyContacts: { isValid: true, errors: {} },
+    classSelections: { isValid: true, errors: {} },
+  },
+});
 
 // Initial state
 const initialState: EnrollmentWizardState = {
-  step: 'family-info', // After auth, we start at family-info
+  step: 'family-info',
   userEmail: null,
   isExistingFamily: false,
   familyId: null,
-  family: null,
+  originalFamily: null,
+  formState: createInitialFormState(),
   academicYear: null,
   availableClasses: [],
+  programs: [],
   suggestedEnrollments: [],
-  selectedEnrollments: [],
+  changesSummary: null,
   isLoading: false,
   error: null,
+  isSubmitting: false,
 };
 
 // Action types
@@ -31,16 +66,21 @@ type EnrollmentAction =
   | { type: 'SET_USER_EMAIL'; payload: string }
   | { type: 'SET_EXISTING_FAMILY'; payload: { familyId: string; familyName: string | null } }
   | { type: 'SET_NEW_FAMILY' }
-  | { type: 'SET_FAMILY'; payload: EnrollmentFamily }
+  | { type: 'SET_ORIGINAL_FAMILY'; payload: EnrollmentFamily }
+  | { type: 'UPDATE_FORM_FAMILY'; payload: Partial<EnrollmentFamily> }
+  | { type: 'UPDATE_FORM_GUARDIANS'; payload: EnrollmentGuardian[] }
+  | { type: 'UPDATE_FORM_CHILDREN'; payload: EnrollmentStudent[] }
+  | { type: 'UPDATE_FORM_EMERGENCY_CONTACTS'; payload: EnrollmentEmergencyContact[] }
+  | { type: 'UPDATE_CLASS_SELECTIONS'; payload: ClassSelection[] }
   | { type: 'SET_ACADEMIC_YEAR'; payload: AcademicYear }
   | { type: 'SET_AVAILABLE_CLASSES'; payload: EnrollmentClass[] }
+  | { type: 'SET_PROGRAMS'; payload: Program[] }
   | { type: 'SET_SUGGESTED_ENROLLMENTS'; payload: StudentEnrollmentSuggestion[] }
-  | { type: 'SET_SELECTED_ENROLLMENTS'; payload: SelectedEnrollment[] }
-  | { type: 'ADD_ENROLLMENT'; payload: SelectedEnrollment }
-  | { type: 'REMOVE_ENROLLMENT'; payload: { studentId: string; classId: string } }
+  | { type: 'SET_CHANGES_SUMMARY'; payload: ChangesSummary }
   | { type: 'SET_STEP'; payload: EnrollmentStep }
   | { type: 'SET_LOADING'; payload: boolean }
   | { type: 'SET_ERROR'; payload: string | null }
+  | { type: 'SET_SUBMITTING'; payload: boolean }
   | { type: 'RESET' };
 
 // Reducer
@@ -61,21 +101,66 @@ function enrollmentReducer(state: EnrollmentWizardState, action: EnrollmentActio
         ...state,
         isExistingFamily: false,
         familyId: null,
-        family: {
-          family_name: null,
-          address: null,
-          city: null,
-          state: null,
-          zip_code: null,
-          diocese_id: null,
-          guardians: [],
-          students: [],
-          emergency_contacts: [],
+        formState: createInitialFormState(),
+      };
+    
+    case 'SET_ORIGINAL_FAMILY':
+      return { 
+        ...state, 
+        originalFamily: action.payload,
+        formState: {
+          ...state.formState,
+          family: action.payload,
+          guardians: action.payload.guardians,
+          children: action.payload.students,
+          emergencyContacts: action.payload.emergency_contacts,
         },
       };
     
-    case 'SET_FAMILY':
-      return { ...state, family: action.payload };
+    case 'UPDATE_FORM_FAMILY':
+      return {
+        ...state,
+        formState: {
+          ...state.formState,
+          family: { ...state.formState.family, ...action.payload },
+        },
+      };
+    
+    case 'UPDATE_FORM_GUARDIANS':
+      return {
+        ...state,
+        formState: {
+          ...state.formState,
+          guardians: action.payload,
+        },
+      };
+    
+    case 'UPDATE_FORM_CHILDREN':
+      return {
+        ...state,
+        formState: {
+          ...state.formState,
+          children: action.payload,
+        },
+      };
+    
+    case 'UPDATE_FORM_EMERGENCY_CONTACTS':
+      return {
+        ...state,
+        formState: {
+          ...state.formState,
+          emergencyContacts: action.payload,
+        },
+      };
+    
+    case 'UPDATE_CLASS_SELECTIONS':
+      return {
+        ...state,
+        formState: {
+          ...state.formState,
+          classSelections: action.payload,
+        },
+      };
     
     case 'SET_ACADEMIC_YEAR':
       return { ...state, academicYear: action.payload };
@@ -83,30 +168,14 @@ function enrollmentReducer(state: EnrollmentWizardState, action: EnrollmentActio
     case 'SET_AVAILABLE_CLASSES':
       return { ...state, availableClasses: action.payload };
     
+    case 'SET_PROGRAMS':
+      return { ...state, programs: action.payload };
+    
     case 'SET_SUGGESTED_ENROLLMENTS':
       return { ...state, suggestedEnrollments: action.payload };
     
-    case 'SET_SELECTED_ENROLLMENTS':
-      return { ...state, selectedEnrollments: action.payload };
-    
-    case 'ADD_ENROLLMENT':
-      // Prevent duplicate enrollments
-      const exists = state.selectedEnrollments.some(
-        (e) => e.student_id === action.payload.student_id && e.class_id === action.payload.class_id
-      );
-      if (exists) return state;
-      return {
-        ...state,
-        selectedEnrollments: [...state.selectedEnrollments, action.payload],
-      };
-    
-    case 'REMOVE_ENROLLMENT':
-      return {
-        ...state,
-        selectedEnrollments: state.selectedEnrollments.filter(
-          (e) => !(e.student_id === action.payload.studentId && e.class_id === action.payload.classId)
-        ),
-      };
+    case 'SET_CHANGES_SUMMARY':
+      return { ...state, changesSummary: action.payload };
     
     case 'SET_STEP':
       return { ...state, step: action.payload };
@@ -116,6 +185,9 @@ function enrollmentReducer(state: EnrollmentWizardState, action: EnrollmentActio
     
     case 'SET_ERROR':
       return { ...state, error: action.payload };
+    
+    case 'SET_SUBMITTING':
+      return { ...state, isSubmitting: action.payload };
     
     case 'RESET':
       return initialState;
@@ -128,19 +200,34 @@ function enrollmentReducer(state: EnrollmentWizardState, action: EnrollmentActio
 // Context type
 interface EnrollmentContextType {
   state: EnrollmentWizardState;
+  
+  // User and family setup
   setUserEmail: (email: string) => void;
   setExistingFamily: (familyId: string, familyName: string | null) => void;
   setNewFamily: () => void;
-  setFamily: (family: EnrollmentFamily) => void;
+  setOriginalFamily: (family: EnrollmentFamily) => void;
+  
+  // Form updates
+  updateFormFamily: (updates: Partial<EnrollmentFamily>) => void;
+  updateFormGuardians: (guardians: EnrollmentGuardian[]) => void;
+  updateFormChildren: (children: EnrollmentStudent[]) => void;
+  updateFormEmergencyContacts: (contacts: EnrollmentEmergencyContact[]) => void;
+  updateClassSelections: (selections: ClassSelection[]) => void;
+  
+  // Academic year and classes
   setAcademicYear: (year: AcademicYear) => void;
   setAvailableClasses: (classes: EnrollmentClass[]) => void;
+  setPrograms: (programs: Program[]) => void;
   setSuggestedEnrollments: (suggestions: StudentEnrollmentSuggestion[]) => void;
-  setSelectedEnrollments: (enrollments: SelectedEnrollment[]) => void;
-  addEnrollment: (enrollment: SelectedEnrollment) => void;
-  removeEnrollment: (studentId: string, classId: string) => void;
+  
+  // Changes and review
+  setChangesSummary: (summary: ChangesSummary) => void;
+  
+  // Navigation
   setStep: (step: EnrollmentStep) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
+  setSubmitting: (submitting: boolean) => void;
   reset: () => void;
   goToNextStep: () => void;
   goToPreviousStep: () => void;
@@ -150,7 +237,7 @@ interface EnrollmentContextType {
 const EnrollmentContext = createContext<EnrollmentContextType | undefined>(undefined);
 
 // Step order for navigation
-const stepOrder: EnrollmentStep[] = ['family-info', 'class-selection', 'review', 'confirmation'];
+const stepOrder: EnrollmentStep[] = ['family-info', 'guardians', 'children', 'emergency-contacts', 'class-selection', 'review', 'confirmation'];
 
 // Provider component
 export function EnrollmentProvider({ children }: { children: ReactNode }) {
@@ -168,8 +255,28 @@ export function EnrollmentProvider({ children }: { children: ReactNode }) {
     dispatch({ type: 'SET_NEW_FAMILY' });
   }, []);
 
-  const setFamily = useCallback((family: EnrollmentFamily) => {
-    dispatch({ type: 'SET_FAMILY', payload: family });
+  const setOriginalFamily = useCallback((family: EnrollmentFamily) => {
+    dispatch({ type: 'SET_ORIGINAL_FAMILY', payload: family });
+  }, []);
+
+  const updateFormFamily = useCallback((updates: Partial<EnrollmentFamily>) => {
+    dispatch({ type: 'UPDATE_FORM_FAMILY', payload: updates });
+  }, []);
+
+  const updateFormGuardians = useCallback((guardians: EnrollmentGuardian[]) => {
+    dispatch({ type: 'UPDATE_FORM_GUARDIANS', payload: guardians });
+  }, []);
+
+  const updateFormChildren = useCallback((children: EnrollmentStudent[]) => {
+    dispatch({ type: 'UPDATE_FORM_CHILDREN', payload: children });
+  }, []);
+
+  const updateFormEmergencyContacts = useCallback((contacts: EnrollmentEmergencyContact[]) => {
+    dispatch({ type: 'UPDATE_FORM_EMERGENCY_CONTACTS', payload: contacts });
+  }, []);
+
+  const updateClassSelections = useCallback((selections: ClassSelection[]) => {
+    dispatch({ type: 'UPDATE_CLASS_SELECTIONS', payload: selections });
   }, []);
 
   const setAcademicYear = useCallback((year: AcademicYear) => {
@@ -180,20 +287,16 @@ export function EnrollmentProvider({ children }: { children: ReactNode }) {
     dispatch({ type: 'SET_AVAILABLE_CLASSES', payload: classes });
   }, []);
 
+  const setPrograms = useCallback((programs: Program[]) => {
+    dispatch({ type: 'SET_PROGRAMS', payload: programs });
+  }, []);
+
   const setSuggestedEnrollments = useCallback((suggestions: StudentEnrollmentSuggestion[]) => {
     dispatch({ type: 'SET_SUGGESTED_ENROLLMENTS', payload: suggestions });
   }, []);
 
-  const setSelectedEnrollments = useCallback((enrollments: SelectedEnrollment[]) => {
-    dispatch({ type: 'SET_SELECTED_ENROLLMENTS', payload: enrollments });
-  }, []);
-
-  const addEnrollment = useCallback((enrollment: SelectedEnrollment) => {
-    dispatch({ type: 'ADD_ENROLLMENT', payload: enrollment });
-  }, []);
-
-  const removeEnrollment = useCallback((studentId: string, classId: string) => {
-    dispatch({ type: 'REMOVE_ENROLLMENT', payload: { studentId, classId } });
+  const setChangesSummary = useCallback((summary: ChangesSummary) => {
+    dispatch({ type: 'SET_CHANGES_SUMMARY', payload: summary });
   }, []);
 
   const setStep = useCallback((step: EnrollmentStep) => {
@@ -206,6 +309,10 @@ export function EnrollmentProvider({ children }: { children: ReactNode }) {
 
   const setError = useCallback((error: string | null) => {
     dispatch({ type: 'SET_ERROR', payload: error });
+  }, []);
+
+  const setSubmitting = useCallback((submitting: boolean) => {
+    dispatch({ type: 'SET_SUBMITTING', payload: submitting });
   }, []);
 
   const reset = useCallback(() => {
@@ -231,16 +338,21 @@ export function EnrollmentProvider({ children }: { children: ReactNode }) {
     setUserEmail,
     setExistingFamily,
     setNewFamily,
-    setFamily,
+    setOriginalFamily,
+    updateFormFamily,
+    updateFormGuardians,
+    updateFormChildren,
+    updateFormEmergencyContacts,
+    updateClassSelections,
     setAcademicYear,
     setAvailableClasses,
+    setPrograms,
     setSuggestedEnrollments,
-    setSelectedEnrollments,
-    addEnrollment,
-    removeEnrollment,
+    setChangesSummary,
     setStep,
     setLoading,
     setError,
+    setSubmitting,
     reset,
     goToNextStep,
     goToPreviousStep,

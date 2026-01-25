@@ -121,22 +121,99 @@ export interface EnrollmentWizardState {
   userEmail: string | null;
   isExistingFamily: boolean;
   familyId: string | null;
-  family: EnrollmentFamily | null;
+  
+  // Original data from database
+  originalFamily: EnrollmentFamily | null;
+  
+  // Current form state (edited data)
+  formState: FormState;
+  
+  // Academic year and classes
   academicYear: AcademicYear | null;
   availableClasses: EnrollmentClass[];
+  programs: Program[];
+  
+  // Suggestions from auto-progression
   suggestedEnrollments: StudentEnrollmentSuggestion[];
-  selectedEnrollments: SelectedEnrollment[];
+  
+  // Changes summary for review
+  changesSummary: ChangesSummary | null;
+  
+  // Loading and error states
   isLoading: boolean;
   error: string | null;
+  
+  // Submission state
+  isSubmitting: boolean;
 }
 
 // Enrollment steps
 export type EnrollmentStep = 
-  | 'authentication'
   | 'family-info'
+  | 'guardians'
+  | 'children'
+  | 'emergency-contacts'
   | 'class-selection'
   | 'review'
   | 'confirmation';
+
+// Class selection for each child
+export interface ClassSelection {
+  student_id: string;
+  giao_ly_level: number | null; // 1-9 or null if not enrolling
+  viet_ngu_level: number | null; // 1-9 or null if not enrolling
+  giao_ly_completed: boolean; // true if completed level 9
+  viet_ngu_completed: boolean; // true if completed level 9
+}
+
+// Form validation state
+export interface FormValidation {
+  isValid: boolean;
+  errors: Record<string, string>;
+}
+
+// Form state for editing
+export interface FormState {
+  family: EnrollmentFamily;
+  guardians: EnrollmentGuardian[];
+  children: EnrollmentStudent[];
+  emergencyContacts: EnrollmentEmergencyContact[];
+  classSelections: ClassSelection[];
+  validation: {
+    family: FormValidation;
+    guardians: FormValidation;
+    children: FormValidation;
+    emergencyContacts: FormValidation;
+    classSelections: FormValidation;
+  };
+}
+
+// Changes tracking
+export interface ChangesSummary {
+  family: {
+    hasChanges: boolean;
+    changes: Partial<EnrollmentFamily>;
+  };
+  guardians: {
+    hasChanges: boolean;
+    added: EnrollmentGuardian[];
+    modified: EnrollmentGuardian[];
+    removed: string[]; // IDs
+  };
+  children: {
+    hasChanges: boolean;
+    added: EnrollmentStudent[];
+    modified: EnrollmentStudent[];
+    removed: string[]; // IDs
+  };
+  emergencyContacts: {
+    hasChanges: boolean;
+    added: EnrollmentEmergencyContact[];
+    modified: EnrollmentEmergencyContact[];
+    removed: string[]; // IDs
+  };
+  enrollments: ClassSelection[];
+}
 
 // Enrollment step info for progress display
 export interface EnrollmentStepInfo {
@@ -146,35 +223,48 @@ export interface EnrollmentStepInfo {
   number: number;
 }
 
+// Updated enrollment steps for Phase 2
 export const ENROLLMENT_STEPS: EnrollmentStepInfo[] = [
   {
-    id: 'authentication',
-    title: 'Sign In',
-    description: 'Verify your email',
+    id: 'family-info',
+    title: 'Family Info',
+    description: 'Family details and address',
     number: 1,
   },
   {
-    id: 'family-info',
-    title: 'Family Information',
-    description: 'Review or add family details',
+    id: 'guardians',
+    title: 'Parents/Guardians',
+    description: 'Parent and guardian information',
     number: 2,
+  },
+  {
+    id: 'children',
+    title: 'Children',
+    description: 'Student information',
+    number: 3,
+  },
+  {
+    id: 'emergency-contacts',
+    title: 'Emergency Contacts',
+    description: 'Emergency contact details',
+    number: 4,
   },
   {
     id: 'class-selection',
     title: 'Class Selection',
     description: 'Choose classes for your children',
-    number: 3,
+    number: 5,
   },
   {
     id: 'review',
     title: 'Review',
     description: 'Review your enrollment',
-    number: 4,
+    number: 6,
   },
   {
     id: 'confirmation',
     title: 'Confirmation',
     description: 'Enrollment complete',
-    number: 5,
+    number: 7,
   },
 ];

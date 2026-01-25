@@ -7,6 +7,9 @@ import { useEnrollment } from './EnrollmentContext';
 import { WizardHeader } from './components/WizardHeader';
 import { ProgressIndicator } from './components/ProgressIndicator';
 import { FamilyInfoStep } from './components/FamilyInfoStep';
+import { GuardiansStep } from './components/GuardiansStep';
+import { ChildrenStep } from './components/ChildrenStep';
+import { EmergencyContactsStep } from './components/EmergencyContactsStep';
 import { ClassSelectionStep } from './components/ClassSelectionStep';
 import { ReviewStep } from './components/ReviewStep';
 import { ConfirmationStep } from './components/ConfirmationStep';
@@ -16,6 +19,7 @@ import {
   getCurrentAcademicYear,
   getClassesForEnrollment,
   getSuggestedEnrollments,
+  getPrograms,
 } from '@/lib/enrollmentApi';
 
 export default function EnrollmentWizardPage() {
@@ -28,11 +32,12 @@ export default function EnrollmentWizardPage() {
     setUserEmail,
     setExistingFamily,
     setNewFamily,
-    setFamily,
+    setOriginalFamily,
     setAcademicYear,
     setAvailableClasses,
+    setPrograms,
     setSuggestedEnrollments,
-    setSelectedEnrollments,
+    updateClassSelections,
     setLoading,
     setError,
   } = useEnrollment();
@@ -66,9 +71,12 @@ export default function EnrollmentWizardPage() {
         const academicYear = await getCurrentAcademicYear();
         setAcademicYear(academicYear);
         
-        // Get available classes
+        // Get available classes and programs
         const classesResponse = await getClassesForEnrollment(academicYear.id);
         setAvailableClasses(classesResponse.classes);
+        
+        const programs = await getPrograms();
+        setPrograms(programs);
         
         // Look up family by email
         const lookupResult = await lookupFamilyByEmail(email);
@@ -79,24 +87,41 @@ export default function EnrollmentWizardPage() {
           
           // Get full family data
           const familyData = await getFamilyForEnrollment(lookupResult.family_id);
-          setFamily(familyData);
+          setOriginalFamily(familyData);
           
           // Get suggested enrollments with grade progression
           const suggestions = await getSuggestedEnrollments(lookupResult.family_id);
           setSuggestedEnrollments(suggestions.suggested_enrollments);
           
-          // Pre-populate selected enrollments from suggestions
-          const prePopulatedEnrollments = suggestions.suggested_enrollments.flatMap(
-            (student) =>
-              student.suggested_classes.map((cls) => ({
-                student_id: student.student_id,
-                class_id: cls.class_id,
-                class_name: cls.class_name,
-                program_name: cls.program_name,
-                is_auto_suggested: true,
-              }))
-          );
-          setSelectedEnrollments(prePopulatedEnrollments);
+          // Convert suggestions to class selections format
+          const classSelections = suggestions.suggested_enrollments.flatMap(studentSuggestion => {
+            const student = familyData.students.find(s => s.id === studentSuggestion.student_id);
+            if (!student) return [];
+            
+            const selection = {
+              student_id: studentSuggestion.student_id,
+              giao_ly_level: null as number | null,
+              viet_ngu_level: null as number | null,
+              giao_ly_completed: false,
+              viet_ngu_completed: false,
+            };
+            
+            // Set suggested levels from auto-progression
+            studentSuggestion.suggested_classes.forEach(cls => {
+              const level = parseInt(cls.class_name.match(/\d+$/)?.[0] || '0');
+              if (cls.program_name?.toLowerCase().includes('giao') || 
+                  cls.program_name?.toLowerCase().includes('giáo')) {
+                selection.giao_ly_level = level;
+              } else if (cls.program_name?.toLowerCase().includes('viet') || 
+                         cls.program_name?.toLowerCase().includes('việt')) {
+                selection.viet_ngu_level = level;
+              }
+            });
+            
+            return [selection];
+          });
+          
+          updateClassSelections(classSelections);
         } else {
           // New family - set up empty family structure
           setNewFamily();
@@ -119,11 +144,12 @@ export default function EnrollmentWizardPage() {
     setUserEmail,
     setExistingFamily,
     setNewFamily,
-    setFamily,
+    setOriginalFamily,
     setAcademicYear,
     setAvailableClasses,
+    setPrograms,
     setSuggestedEnrollments,
-    setSelectedEnrollments,
+    updateClassSelections,
     setLoading,
     setError,
   ]);
@@ -180,6 +206,12 @@ export default function EnrollmentWizardPage() {
     switch (state.step) {
       case 'family-info':
         return <FamilyInfoStep />;
+      case 'guardians':
+        return <GuardiansStep />;
+      case 'children':
+        return <ChildrenStep />;
+      case 'emergency-contacts':
+        return <EmergencyContactsStep />;
       case 'class-selection':
         return <ClassSelectionStep />;
       case 'review':
@@ -196,7 +228,7 @@ export default function EnrollmentWizardPage() {
       {/* Header */}
       <WizardHeader
         userEmail={state.userEmail}
-        familyName={state.family?.family_name}
+        familyName={state.formState.family.family_name}
         academicYear={state.academicYear?.name}
       />
       
