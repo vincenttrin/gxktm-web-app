@@ -74,13 +74,15 @@ export interface EnrollmentStudent {
   id?: string;
   first_name: string;
   last_name: string;
-  middle_name: string | null;
-  saint_name: string | null;
-  date_of_birth: string | null;
-  gender: string | null;
+  middle_name?: string | null;
+  saint_name?: string | null;
+  vietnamese_name?: string | null;
+  date_of_birth: string;
+  gender?: string | null;
   grade_level: number | null;
-  american_school: string | null;
-  notes: string | null;
+  american_school?: string | null;
+  notes?: string | null;
+  special_needs?: string | null;
 }
 
 // Emergency contact for enrollment form

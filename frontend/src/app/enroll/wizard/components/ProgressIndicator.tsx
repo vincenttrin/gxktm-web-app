@@ -7,8 +7,8 @@ interface ProgressIndicatorProps {
 }
 
 export function ProgressIndicator({ currentStep }: ProgressIndicatorProps) {
-  // Filter out the authentication step since we're past it in the wizard
-  const wizardSteps = ENROLLMENT_STEPS.filter(step => step.id !== 'authentication');
+  // Use all wizard steps (confirmation is the last step)
+  const wizardSteps = ENROLLMENT_STEPS.filter(step => step.id !== 'confirmation');
   
   const currentStepIndex = wizardSteps.findIndex(step => step.id === currentStep);
   

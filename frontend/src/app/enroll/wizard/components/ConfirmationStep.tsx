@@ -1,45 +1,59 @@
 'use client';
 
-import { useEnrollment } from '../EnrollmentContext';
 import Link from 'next/link';
+import { useEnrollment } from '../EnrollmentContext';
 
 export function ConfirmationStep() {
   const { state } = useEnrollment();
-  const { family, selectedEnrollments, academicYear, userEmail } = state;
+  const { formState, academicYear } = state;
+  const { family, children, classSelections } = formState;
   
-  // Group enrollments by student
-  const enrollmentsByStudent = family?.students.map((student) => ({
-    student,
-    enrollments: selectedEnrollments.filter((e) => e.student_id === student.id),
-  })) || [];
+  // Get enrollment summary
+  const enrollmentSummary = children.map(child => {
+    const selection = classSelections.find(s => s.student_id === child.id);
+    return {
+      name: `${child.first_name} ${child.last_name}`,
+      giaoLy: selection?.giao_ly_completed 
+        ? 'Completed' 
+        : selection?.giao_ly_level 
+          ? `Level ${selection.giao_ly_level}` 
+          : null,
+      vietNgu: selection?.viet_ngu_completed 
+        ? 'Completed' 
+        : selection?.viet_ngu_level 
+          ? `Level ${selection.viet_ngu_level}` 
+          : null,
+    };
+  });
   
   return (
-    <div className="max-w-2xl mx-auto space-y-8">
-      {/* Success Icon */}
+    <div className="space-y-8">
+      {/* Success Banner */}
       <div className="text-center">
         <div className="mx-auto h-20 w-20 rounded-full bg-green-100 flex items-center justify-center mb-6">
           <svg className="h-10 w-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
           </svg>
         </div>
-        <h2 className="text-3xl font-bold text-gray-900">Enrollment Complete!</h2>
-        <p className="mt-3 text-lg text-gray-600">
-          Thank you for enrolling your children for {academicYear?.name}.
+        <h2 className="text-3xl font-bold text-gray-900">Enrollment Submitted!</h2>
+        <p className="mt-2 text-lg text-gray-600">
+          Thank you for enrolling with us for the {academicYear?.name || 'upcoming'} academic year.
         </p>
       </div>
       
-      {/* Confirmation email notice */}
-      <div className="bg-blue-50 border border-blue-200 rounded-xl p-6">
+      {/* Confirmation Details */}
+      <div className="bg-green-50 rounded-xl border border-green-200 p-6">
         <div className="flex items-start gap-4">
-          <div className="flex-shrink-0">
-            <svg className="h-6 w-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="h-12 w-12 rounded-full bg-green-600 flex items-center justify-center flex-shrink-0">
+            <svg className="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
             </svg>
           </div>
           <div>
-            <h3 className="text-sm font-semibold text-blue-900">Confirmation Email Sent</h3>
-            <p className="mt-1 text-sm text-blue-700">
-              A confirmation email has been sent to <strong>{userEmail}</strong> with a summary of your enrollment.
+            <h3 className="text-lg font-semibold text-green-900">Confirmation Email Sent</h3>
+            <p className="text-sm text-green-700 mt-1">
+              A confirmation email has been sent to your registered email address with all the enrollment details.
+              Please check your inbox (and spam folder) for the confirmation.
             </p>
           </div>
         </div>
@@ -49,88 +63,112 @@ export function ConfirmationStep() {
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
           <h3 className="text-lg font-semibold text-gray-900">Enrollment Summary</h3>
-          <p className="text-sm text-gray-500">{family?.family_name}</p>
+          <p className="text-sm text-gray-600 mt-1">
+            Family: {family.family_name || 'Not specified'}
+          </p>
         </div>
+        
         <div className="divide-y divide-gray-100">
-          {enrollmentsByStudent.map(({ student, enrollments }) => (
-            <div key={student.id} className="p-6">
-              <h4 className="text-sm font-semibold text-gray-900 mb-3">
-                {student.first_name} {student.last_name}
-              </h4>
-              <div className="space-y-2">
-                {enrollments.map((enrollment) => (
-                  <div
-                    key={enrollment.class_id}
-                    className="flex items-center gap-2 text-sm text-gray-700"
-                  >
-                    <svg className="h-4 w-4 text-green-500" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
-                    <span>{enrollment.class_name}</span>
-                    <span className="text-gray-400">•</span>
-                    <span className="text-gray-500">{enrollment.program_name}</span>
+          {enrollmentSummary.map((student, index) => (
+            <div key={index} className="px-6 py-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
+                    <span className="text-green-600 font-medium text-sm">
+                      {student.name.split(' ').map(n => n[0]).join('')}
+                    </span>
                   </div>
-                ))}
+                  <p className="font-medium text-gray-900">{student.name}</p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {student.giaoLy && (
+                    <span className="inline-flex items-center rounded-full bg-amber-100 px-3 py-1 text-sm font-medium text-amber-800">
+                      Giáo Lý: {student.giaoLy}
+                    </span>
+                  )}
+                  {student.vietNgu && (
+                    <span className="inline-flex items-center rounded-full bg-blue-100 px-3 py-1 text-sm font-medium text-blue-800">
+                      Việt Ngữ: {student.vietNgu}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
           ))}
         </div>
       </div>
       
-      {/* Next Steps */}
-      <div className="bg-amber-50 border border-amber-200 rounded-xl p-6">
-        <h3 className="text-sm font-semibold text-amber-900 flex items-center gap-2">
-          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          Next Steps
-        </h3>
-        <ul className="mt-3 space-y-2 text-sm text-amber-800">
-          <li className="flex items-start gap-2">
-            <span className="font-medium">1.</span>
-            <span>Payment information will be sent to you separately via email.</span>
+      {/* What's Next */}
+      <div className="bg-blue-50 rounded-xl border border-blue-200 p-6">
+        <h3 className="text-lg font-semibold text-blue-900 mb-4">What&apos;s Next?</h3>
+        <ul className="space-y-3">
+          <li className="flex items-start gap-3">
+            <div className="h-6 w-6 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0 mt-0.5">
+              <span className="text-white text-xs font-bold">1</span>
+            </div>
+            <p className="text-sm text-blue-800">
+              <span className="font-medium">Check your email</span> – You will receive a confirmation email with enrollment details and next steps.
+            </p>
           </li>
-          <li className="flex items-start gap-2">
-            <span className="font-medium">2.</span>
-            <span>You will receive class schedules and teacher information before the school year begins.</span>
+          <li className="flex items-start gap-3">
+            <div className="h-6 w-6 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0 mt-0.5">
+              <span className="text-white text-xs font-bold">2</span>
+            </div>
+            <p className="text-sm text-blue-800">
+              <span className="font-medium">Complete payment</span> – Tuition payment information will be sent separately. Payment is due before the first day of class.
+            </p>
           </li>
-          <li className="flex items-start gap-2">
-            <span className="font-medium">3.</span>
-            <span>If you need to make changes to your enrollment, please contact us.</span>
+          <li className="flex items-start gap-3">
+            <div className="h-6 w-6 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0 mt-0.5">
+              <span className="text-white text-xs font-bold">3</span>
+            </div>
+            <p className="text-sm text-blue-800">
+              <span className="font-medium">Mark your calendar</span> – The first day of class will be announced via email. Please arrive 15 minutes early for registration.
+            </p>
           </li>
         </ul>
       </div>
       
-      {/* Actions */}
-      <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
-        <Link
+      {/* Contact Information */}
+      <div className="bg-gray-50 rounded-xl border border-gray-200 p-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-3">Questions?</h3>
+        <p className="text-sm text-gray-600 mb-4">
+          If you have any questions about your enrollment or need to make changes, please contact us:
+        </p>
+        <div className="flex flex-wrap gap-4">
+          <a 
+            href="mailto:gxktm@example.com" 
+            className="inline-flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-700"
+          >
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+            </svg>
+            gxktm@example.com
+          </a>
+          <a 
+            href="tel:+15551234567" 
+            className="inline-flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-700"
+          >
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+            </svg>
+            (555) 123-4567
+          </a>
+        </div>
+      </div>
+      
+      {/* Action Button */}
+      <div className="flex justify-center pt-4">
+        <Link 
           href="/enroll"
-          className="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-6 py-3 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 transition-all"
+          className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-8 py-3 text-sm font-medium text-white shadow-sm hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all"
         >
           <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
           </svg>
           Return to Home
         </Link>
-        <button
-          type="button"
-          onClick={() => window.print()}
-          className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-6 py-3 text-sm font-medium text-white shadow-sm hover:bg-blue-500 transition-all"
-        >
-          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-          </svg>
-          Print Summary
-        </button>
       </div>
-      
-      {/* Support */}
-      <p className="text-center text-sm text-gray-500 pt-4">
-        Questions? Contact us at{' '}
-        <a href="mailto:support@gxktm.org" className="text-blue-600 hover:underline">
-          support@gxktm.org
-        </a>
-      </p>
     </div>
   );
 }

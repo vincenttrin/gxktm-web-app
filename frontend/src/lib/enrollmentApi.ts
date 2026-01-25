@@ -160,4 +160,86 @@ export async function getPrograms(): Promise<Program[]> {
   return handleResponse<Program[]>(response);
 }
 
+/**
+ * Enrollment submission request payload
+ */
+export interface EnrollmentSubmissionRequest {
+  family_id: string | null;
+  family_info: {
+    family_name: string | null;
+    address: string | null;
+    city: string | null;
+    state: string | null;
+    zip_code: string | null;
+    diocese_id: string | null;
+  };
+  guardians: Array<{
+    id?: string | null;
+    name: string;
+    email: string | null;
+    phone: string | null;
+    relationship_to_family: string | null;
+  }>;
+  students: Array<{
+    id?: string | null;
+    first_name: string;
+    last_name: string;
+    middle_name?: string | null;
+    vietnamese_name?: string | null;
+    saint_name?: string | null;
+    date_of_birth?: string | null;
+    gender?: string | null;
+    grade_level?: number | null;
+    american_school?: string | null;
+    special_needs?: string | null;
+    notes?: string | null;
+  }>;
+  emergency_contacts: Array<{
+    id?: string | null;
+    name: string;
+    email?: string | null;
+    phone: string;
+    relationship_to_family: string | null;
+  }>;
+  class_selections: Array<{
+    student_id: string;
+    giao_ly_level: number | null;
+    viet_ngu_level: number | null;
+    giao_ly_completed: boolean;
+    viet_ngu_completed: boolean;
+  }>;
+  academic_year_id: number;
+}
+
+/**
+ * Enrollment submission response
+ */
+export interface EnrollmentSubmissionResponse {
+  success: boolean;
+  family_id: string;
+  enrollment_ids: string[];
+  message: string;
+}
+
+/**
+ * Submit a complete family enrollment.
+ * This is the main endpoint for submitting all enrollment data.
+ */
+export async function submitEnrollment(
+  request: EnrollmentSubmissionRequest
+): Promise<EnrollmentSubmissionResponse> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/enrollment/submit`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(request),
+    }
+  );
+  
+  return handleResponse<EnrollmentSubmissionResponse>(response);
+}
+
 export { EnrollmentApiError };

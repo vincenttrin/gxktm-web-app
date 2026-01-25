@@ -233,3 +233,79 @@ class EnrollmentResponse(BaseModel):
 class ClassWithEnrollments(ClassResponse):
     enrollments: List[EnrollmentResponse] = []
     enrollment_count: int = 0
+
+
+# --- Enrollment Submission Schemas (for public enrollment portal) ---
+class EnrollmentGuardianSubmission(BaseModel):
+    """Guardian data for enrollment submission. ID is optional for new guardians."""
+    id: Optional[UUID] = None
+    name: str
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    relationship_to_family: Optional[str] = None
+
+
+class EnrollmentEmergencyContactSubmission(BaseModel):
+    """Emergency contact data for enrollment submission. ID is optional for new contacts."""
+    id: Optional[UUID] = None
+    name: str
+    email: Optional[str] = None
+    phone: str
+    relationship_to_family: Optional[str] = None
+
+
+class EnrollmentStudentSubmission(BaseModel):
+    """Student data for enrollment submission. ID is optional for new students."""
+    id: Optional[UUID] = None
+    first_name: str
+    last_name: str
+    middle_name: Optional[str] = None
+    vietnamese_name: Optional[str] = None  # Vietnamese name (optional)
+    saint_name: Optional[str] = None
+    date_of_birth: Optional[date] = None
+    gender: Optional[str] = None
+    grade_level: Optional[int] = None  # American school grade level
+    american_school: Optional[str] = None
+    special_needs: Optional[str] = None  # Special needs or notes
+    notes: Optional[str] = None
+
+
+class ClassSelectionSubmission(BaseModel):
+    """Class selection for a student during enrollment."""
+    student_id: UUID  # Must be a valid student ID
+    giao_ly_level: Optional[int] = None  # 1-9, None means not enrolling
+    viet_ngu_level: Optional[int] = None  # 1-9, None means not enrolling
+    giao_ly_completed: bool = False  # True if already completed all levels
+    viet_ngu_completed: bool = False  # True if already completed all levels
+
+
+class FamilyInfoSubmission(BaseModel):
+    """Family information for enrollment submission."""
+    family_name: Optional[str] = None
+    address: Optional[str] = None
+    city: Optional[str] = None
+    state: Optional[str] = None
+    zip_code: Optional[str] = None
+    diocese_id: Optional[str] = None
+
+
+class EnrollmentSubmissionRequest(BaseModel):
+    """
+    Complete enrollment submission request.
+    This is the main payload for submitting family enrollment data.
+    """
+    family_id: Optional[UUID] = None  # None for new families
+    family_info: FamilyInfoSubmission
+    guardians: List[EnrollmentGuardianSubmission]
+    students: List[EnrollmentStudentSubmission]
+    emergency_contacts: List[EnrollmentEmergencyContactSubmission]
+    class_selections: List[ClassSelectionSubmission]
+    academic_year_id: int
+
+
+class EnrollmentSubmissionResponse(BaseModel):
+    """Response after successful enrollment submission."""
+    success: bool
+    family_id: UUID
+    enrollment_ids: List[UUID]
+    message: str
