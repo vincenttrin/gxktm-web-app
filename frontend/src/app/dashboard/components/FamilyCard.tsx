@@ -19,12 +19,14 @@ interface FamilyCardProps {
   family: Family;
   onEdit: () => void;
   onDelete: () => void;
+  onViewDetails: () => void;
 }
 
 export default function FamilyCard({
   family,
   onEdit,
   onDelete,
+  onViewDetails,
 }: FamilyCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -35,7 +37,8 @@ export default function FamilyCard({
     return parts.length > 0 ? parts.join(', ') : 'No address provided';
   };
 
-  const getStudentAge = (dateOfBirth: string) => {
+  const getStudentAge = (dateOfBirth: string | null) => {
+    if (!dateOfBirth) return 'N/A';
     const today = new Date();
     const birthDate = new Date(dateOfBirth);
     let age = today.getFullYear() - birthDate.getFullYear();
@@ -47,12 +50,15 @@ export default function FamilyCard({
   };
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow overflow-hidden">
+    <div 
+      className="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all cursor-pointer overflow-hidden group"
+      onClick={onViewDetails}
+    >
       {/* Card Header */}
       <div className="p-4 border-b border-gray-100">
         <div className="flex items-start justify-between">
           <div className="flex-1 min-w-0">
-            <h3 className="text-lg font-semibold text-gray-900 truncate">
+            <h3 className="text-lg font-semibold text-gray-900 truncate group-hover:text-blue-600 transition-colors">
               {family.family_name || 'Unnamed Family'}
             </h3>
             <div className="flex items-center gap-1 mt-1 text-sm text-gray-500">
@@ -62,9 +68,9 @@ export default function FamilyCard({
           </div>
           
           {/* Action Buttons */}
-          <div className="flex items-center gap-1 ml-2">
+          <div className="flex items-center gap-1 ml-2" onClick={(e) => e.stopPropagation()}>
             <button
-              onClick={onEdit}
+              onClick={onViewDetails}
               className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
               title="Edit family"
             >
@@ -265,7 +271,10 @@ export default function FamilyCard({
         family.emergency_contacts.length > 0 ||
         family.diocese_id) && (
         <button
-          onClick={() => setIsExpanded(!isExpanded)}
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsExpanded(!isExpanded);
+          }}
           className="w-full px-4 py-2 text-sm text-gray-500 hover:text-gray-700 hover:bg-gray-50 border-t border-gray-100 flex items-center justify-center gap-1 transition-colors"
         >
           {isExpanded ? (

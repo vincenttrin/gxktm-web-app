@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { Plus, Search, Book, Users, Download, Edit2, Trash2, X } from 'lucide-react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { Plus, Search, Book, Users, Download, Edit2, Trash2, X, RefreshCw } from 'lucide-react';
 import { getClasses, getPrograms, getClassExportUrl } from '@/lib/api';
 import { ClassItem, Program, AcademicYear } from '@/types/family';
+import { normalizeVietnamese } from '@/utils/vietnamese';
 import ClassModal from './ClassModal';
 import ClassDetail from './ClassDetail';
 import DeleteClassDialog from './DeleteClassDialog';
@@ -13,16 +14,29 @@ interface ClassListProps {
   selectedYear: AcademicYear | null;
 }
 
+// Year-specific cache for classes
+interface ClassCache {
+  [yearId: number]: {
+    classes: ClassItem[];
+    fetchedAt: Date;
+  };
+}
+
 export default function ClassList({ selectedYear }: ClassListProps) {
+  // Cache for year-specific class data
+  const classCacheRef = useRef<ClassCache>({});
+  
   const [classes, setClasses] = useState<ClassItem[]>([]);
   const [programs, setPrograms] = useState<Program[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lastFetchTime, setLastFetchTime] = useState<Date | null>(null);
   
   // Selected class for detail view
   const [selectedClass, setSelectedClass] = useState<ClassItem | null>(null);
   
-  // Filters
+  // Filters - client-side only now
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedProgramId, setSelectedProgramId] = useState<number | null>(null);
   
@@ -37,25 +51,48 @@ export default function ClassList({ selectedYear }: ClassListProps) {
     type: 'success' | 'error';
   } | null>(null);
 
-  const loadClasses = useCallback(async () => {
+  const loadClasses = useCallback(async (forceRefresh = false) => {
     if (!selectedYear) return;
     
-    setIsLoading(true);
+    // Check cache first (unless forcing refresh)
+    const cached = classCacheRef.current[selectedYear.id];
+    if (!forceRefresh && cached) {
+      setClasses(cached.classes);
+      setLastFetchTime(cached.fetchedAt);
+      setIsInitialLoading(false);
+      return;
+    }
+    
+    if (forceRefresh) {
+      setIsRefreshing(true);
+    } else {
+      setIsInitialLoading(true);
+    }
     setError(null);
     
     try {
+      // Only fetch classes for the selected year (no program filter - that's done client-side)
       const data = await getClasses({
         academic_year_id: selectedYear.id,
-        program_id: selectedProgramId || undefined,
       });
+      
+      // Update cache
+      const fetchedAt = new Date();
+      classCacheRef.current[selectedYear.id] = {
+        classes: data,
+        fetchedAt,
+      };
+      
       setClasses(data);
+      setLastFetchTime(fetchedAt);
     } catch (err) {
       console.error('Failed to load classes:', err);
       setError('Failed to load classes. Please try again.');
     } finally {
-      setIsLoading(false);
+      setIsInitialLoading(false);
+      setIsRefreshing(false);
     }
-  }, [selectedYear, selectedProgramId]);
+  }, [selectedYear]);
 
   const loadPrograms = useCallback(async () => {
     try {
@@ -70,9 +107,23 @@ export default function ClassList({ selectedYear }: ClassListProps) {
     loadPrograms();
   }, [loadPrograms]);
 
+  // Load classes when year changes
   useEffect(() => {
-    loadClasses();
-  }, [loadClasses]);
+    if (selectedYear) {
+      loadClasses();
+    }
+  }, [selectedYear, loadClasses]);
+
+  const handleRefresh = () => {
+    loadClasses(true);
+  };
+
+  // Invalidate cache for current year (after CRUD operations)
+  const invalidateCache = useCallback(() => {
+    if (selectedYear) {
+      delete classCacheRef.current[selectedYear.id];
+    }
+  }, [selectedYear]);
 
   const handleExport = (classItem: ClassItem, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -93,19 +144,22 @@ export default function ClassList({ selectedYear }: ClassListProps) {
 
   const handleClassCreated = () => {
     setIsCreateModalOpen(false);
-    loadClasses();
+    invalidateCache();
+    loadClasses(true);
     showToast('Class created successfully', 'success');
   };
 
   const handleClassUpdated = () => {
     setEditingClass(null);
-    loadClasses();
+    invalidateCache();
+    loadClasses(true);
     showToast('Class updated successfully', 'success');
   };
 
   const handleClassDeleted = () => {
     setDeletingClass(null);
-    loadClasses();
+    invalidateCache();
+    loadClasses(true);
     showToast('Class deleted successfully', 'success');
   };
 
@@ -114,21 +168,40 @@ export default function ClassList({ selectedYear }: ClassListProps) {
     setTimeout(() => setToast(null), 3000);
   };
 
-  // Filter classes by search query
-  const filteredClasses = classes.filter((cls) =>
-    cls.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    cls.program?.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Client-side filtering with Vietnamese support
+  const filteredClasses = useMemo(() => {
+    let result = classes;
+    
+    // Filter by program (client-side)
+    if (selectedProgramId) {
+      result = result.filter(cls => cls.program_id === selectedProgramId);
+    }
+    
+    // Filter by search query with Vietnamese normalization
+    if (searchQuery) {
+      const normalizedQuery = normalizeVietnamese(searchQuery);
+      result = result.filter(cls => {
+        const normalizedName = normalizeVietnamese(cls.name);
+        const normalizedProgram = normalizeVietnamese(cls.program?.name || '');
+        return normalizedName.includes(normalizedQuery) || 
+               normalizedProgram.includes(normalizedQuery);
+      });
+    }
+    
+    return result;
+  }, [classes, searchQuery, selectedProgramId]);
 
   // Group classes by program
-  const groupedClasses = filteredClasses.reduce((acc, cls) => {
-    const programName = cls.program?.name || 'Uncategorized';
-    if (!acc[programName]) {
-      acc[programName] = [];
-    }
-    acc[programName].push(cls);
-    return acc;
-  }, {} as Record<string, ClassItem[]>);
+  const groupedClasses = useMemo(() => {
+    return filteredClasses.reduce((acc, cls) => {
+      const programName = cls.program?.name || 'Uncategorized';
+      if (!acc[programName]) {
+        acc[programName] = [];
+      }
+      acc[programName].push(cls);
+      return acc;
+    }, {} as Record<string, ClassItem[]>);
+  }, [filteredClasses]);
 
   if (!selectedYear) {
     return (
@@ -167,17 +240,35 @@ export default function ClassList({ selectedYear }: ClassListProps) {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Classes</h2>
-          <p className="text-sm text-gray-500 mt-1">
-            {selectedYear.name} • {classes.length} {classes.length === 1 ? 'class' : 'classes'}
-          </p>
+          <div className="flex items-center gap-2 mt-1">
+            <p className="text-sm text-gray-500">
+              {selectedYear.name} • {filteredClasses.length} {filteredClasses.length === 1 ? 'class' : 'classes'}
+              {searchQuery && ` matching "${searchQuery}"`}
+            </p>
+            {lastFetchTime && (
+              <span className="text-xs text-gray-400">
+                • Last updated: {lastFetchTime.toLocaleTimeString()}
+              </span>
+            )}
+          </div>
         </div>
-        <button
-          onClick={() => setIsCreateModalOpen(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
-        >
-          <Plus className="h-5 w-5" />
-          Add Class
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            className="flex items-center gap-2 px-3 py-2 text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+            title="Refresh data"
+          >
+            <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+          </button>
+          <button
+            onClick={() => setIsCreateModalOpen(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+          >
+            <Plus className="h-5 w-5" />
+            Add Class
+          </button>
+        </div>
       </div>
 
       {/* Search & Filter Bar */}
@@ -188,7 +279,7 @@ export default function ClassList({ selectedYear }: ClassListProps) {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search classes..."
+            placeholder="Search classes (supports Vietnamese)..."
             className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-gray-700"
           />
           {searchQuery && (
@@ -215,12 +306,19 @@ export default function ClassList({ selectedYear }: ClassListProps) {
         </select>
       </div>
 
+      {/* Search indicator */}
+      {searchQuery && !isInitialLoading && (
+        <div className="mb-4 text-sm text-blue-600 bg-blue-50 px-3 py-2 rounded-lg">
+          ⚡ Searching cached data instantly
+        </div>
+      )}
+
       {/* Error State */}
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
           {error}
           <button
-            onClick={loadClasses}
+            onClick={() => loadClasses(true)}
             className="ml-2 underline hover:no-underline"
           >
             Try again
@@ -228,16 +326,17 @@ export default function ClassList({ selectedYear }: ClassListProps) {
         </div>
       )}
 
-      {/* Loading State */}
-      {isLoading && (
-        <div className="flex items-center justify-center py-12">
+      {/* Initial Loading State */}
+      {isInitialLoading && (
+        <div className="flex flex-col items-center justify-center py-12">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          <span className="ml-3 text-gray-600">Loading classes...</span>
+          <span className="mt-3 text-gray-600">Loading classes for {selectedYear.name}...</span>
+          <span className="mt-1 text-sm text-gray-400">This may take a moment for the initial load</span>
         </div>
       )}
 
       {/* Empty State */}
-      {!isLoading && !error && filteredClasses.length === 0 && (
+      {!isInitialLoading && !error && filteredClasses.length === 0 && (
         <div className="text-center py-12">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 mb-4">
             <Book className="h-8 w-8 text-gray-400" />
@@ -263,7 +362,7 @@ export default function ClassList({ selectedYear }: ClassListProps) {
       )}
 
       {/* Class Cards - Grouped by Program */}
-      {!isLoading && !error && filteredClasses.length > 0 && (
+      {!isInitialLoading && !error && filteredClasses.length > 0 && (
         <div className="space-y-8">
           {Object.entries(groupedClasses).map(([programName, programClasses]) => (
             <div key={programName}>

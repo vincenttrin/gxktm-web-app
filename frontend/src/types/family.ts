@@ -15,7 +15,7 @@ export interface Student {
   last_name: string;
   middle_name: string | null;
   saint_name: string | null;
-  date_of_birth: string;
+  date_of_birth: string | null;
   gender: string | null;
   grade_level: number | null;
   american_school: string | null;
@@ -65,7 +65,7 @@ export interface StudentCreate {
   last_name: string;
   middle_name?: string | null;
   saint_name?: string | null;
-  date_of_birth: string;
+  date_of_birth?: string | null;
   gender?: string | null;
   grade_level?: number | null;
   american_school?: string | null;
@@ -130,7 +130,7 @@ export interface StudentWithFamily {
   last_name: string;
   middle_name: string | null;
   saint_name: string | null;
-  date_of_birth: string;
+  date_of_birth: string | null;
   gender: string | null;
   grade_level: number | null;
   american_school: string | null;

@@ -51,6 +51,14 @@ async function handleResponse<T>(response: Response): Promise<T> {
 
 // --- Family API ---
 
+export async function getAllFamilies(): Promise<Family[]> {
+  const response = await fetch(`${API_BASE_URL}/api/families/all`, {
+    cache: 'no-store',
+  });
+  
+  return handleResponse<Family[]>(response);
+}
+
 export async function getFamilies(params: FamilyQueryParams = {}): Promise<PaginatedFamilyResponse> {
   const searchParams = new URLSearchParams();
   

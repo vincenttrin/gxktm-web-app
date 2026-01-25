@@ -64,7 +64,7 @@ class StudentBase(BaseModel):
     last_name: str
     middle_name: Optional[str] = None
     saint_name: Optional[str] = None
-    date_of_birth: date
+    date_of_birth: Optional[date] = None
     gender: Optional[str] = None
     grade_level: Optional[int] = None
     american_school: Optional[str] = None

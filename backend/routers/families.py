@@ -100,6 +100,26 @@ async def get_families(
     )
 
 
+@router.get("/all", response_model=list[FamilyResponse])
+async def get_all_families(
+    db: AsyncSession = Depends(get_db),
+):
+    """Get all families without pagination for client-side caching.
+    This endpoint returns all families with their related data in a single request,
+    optimized for client-side search and filtering.
+    """
+    query = select(Family).options(
+        selectinload(Family.guardians),
+        selectinload(Family.students),
+        selectinload(Family.emergency_contacts),
+    ).order_by(Family.family_name)
+    
+    result = await db.execute(query)
+    families = result.scalars().all()
+    
+    return families
+
+
 @router.get("/{family_id}", response_model=FamilyResponse)
 async def get_family(family_id: UUID, db: AsyncSession = Depends(get_db)):
     """Get a single family by ID."""

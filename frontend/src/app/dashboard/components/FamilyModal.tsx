@@ -472,7 +472,7 @@ export default function FamilyModal({
                         />
                         <input
                           type="date"
-                          value={student.date_of_birth}
+                          value={student.date_of_birth || ''}
                           onChange={(e) =>
                             updateStudent(index, 'date_of_birth', e.target.value)
                           }
