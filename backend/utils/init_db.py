@@ -1,5 +1,5 @@
 import asyncio
-from  database import engine, Base
+from database import engine, Base
 # Import all models to make sure they are registered with Base.metadata
 from models import AcademicYear, Family, Guardian, EmergencyContact, Program, Class, Student, Enrollment
 

@@ -1,9 +1,18 @@
 import uuid
 from datetime import datetime
-from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, Date, Text, DateTime
+from decimal import Decimal
+from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, Date, Text, DateTime, Numeric, Enum as SQLAlchemyEnum
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from database import Base
+import enum
+
+
+class PaymentStatus(str, enum.Enum):
+    UNPAID = "unpaid"
+    PARTIAL = "partial"
+    PAID = "paid"
+    REFUNDED = "refunded"
 
 # 1. Academic Year
 class AcademicYear(Base):
@@ -29,6 +38,7 @@ class Family(Base):
     guardians = relationship("Guardian", back_populates="family", cascade="all, delete-orphan")
     emergency_contacts = relationship("EmergencyContact", back_populates="family", cascade="all, delete-orphan")
     students = relationship("Student", back_populates="family")
+    payments = relationship("Payment", back_populates="family", cascade="all, delete-orphan")
 
 # 3. Guardian (Parent/Guardian)
 class Guardian(Base):
@@ -102,3 +112,21 @@ class Enrollment(Base):
     
     student = relationship("Student", back_populates="enrollments")
     assigned_class = relationship("Class", back_populates="enrollments")
+
+
+# 7. Payment Tracking
+class Payment(Base):
+    __tablename__ = "payments"
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    family_id = Column(UUID(as_uuid=True), ForeignKey("families.id"), nullable=False)
+    school_year = Column(String, nullable=False)  # e.g., "2024-2025"
+    amount_due = Column(Numeric(10, 2), nullable=True)
+    amount_paid = Column(Numeric(10, 2), default=0)
+    payment_status = Column(SQLAlchemyEnum(PaymentStatus), default=PaymentStatus.UNPAID)
+    payment_date = Column(DateTime, nullable=True)
+    payment_method = Column(String, nullable=True)  # 'cash', 'check', 'venmo', 'zelle', etc.
+    notes = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    family = relationship("Family", back_populates="payments")

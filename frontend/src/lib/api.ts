@@ -18,6 +18,20 @@ import {
   ClassUpdate,
   ClassQueryParams,
   Enrollment,
+  Payment,
+  PaymentCreate,
+  PaymentUpdate,
+  PaymentQueryParams,
+  PaginatedPaymentResponse,
+  PaymentSummary,
+  FamilyWithPayment,
+  FamilyWithPaymentQueryParams,
+  PaginatedFamilyWithPaymentResponse,
+  ManualEnrollmentCreate,
+  ManualEnrollmentResponse,
+  BulkEnrollmentCreate,
+  BulkEnrollmentResponse,
+  StudentEnrollmentInfo,
 } from '@/types/family';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
@@ -350,6 +364,194 @@ export async function unenrollStudent(
 
 export function getClassExportUrl(classId: string): string {
   return `${API_BASE_URL}/api/classes/${classId}/export/csv`;
+}
+
+// --- Payment API ---
+
+export async function getPayments(params: PaymentQueryParams = {}): Promise<PaginatedPaymentResponse> {
+  const searchParams = new URLSearchParams();
+  
+  if (params.page) searchParams.set('page', params.page.toString());
+  if (params.page_size) searchParams.set('page_size', params.page_size.toString());
+  if (params.school_year) searchParams.set('school_year', params.school_year);
+  if (params.payment_status) searchParams.set('payment_status', params.payment_status);
+  if (params.search) searchParams.set('search', params.search);
+  if (params.sort_by) searchParams.set('sort_by', params.sort_by);
+  if (params.sort_order) searchParams.set('sort_order', params.sort_order);
+  
+  const response = await fetch(
+    `${API_BASE_URL}/api/payments?${searchParams.toString()}`,
+    { cache: 'no-store' }
+  );
+  
+  return handleResponse<PaginatedPaymentResponse>(response);
+}
+
+export async function getPaymentSummary(schoolYear?: string): Promise<PaymentSummary> {
+  const searchParams = new URLSearchParams();
+  if (schoolYear) searchParams.set('school_year', schoolYear);
+  
+  const response = await fetch(
+    `${API_BASE_URL}/api/payments/summary?${searchParams.toString()}`,
+    { cache: 'no-store' }
+  );
+  
+  return handleResponse<PaymentSummary>(response);
+}
+
+export async function getPayment(paymentId: string): Promise<Payment> {
+  const response = await fetch(`${API_BASE_URL}/api/payments/${paymentId}`, {
+    cache: 'no-store',
+  });
+  
+  return handleResponse<Payment>(response);
+}
+
+export async function createPayment(data: PaymentCreate): Promise<Payment> {
+  const response = await fetch(`${API_BASE_URL}/api/payments`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  
+  return handleResponse<Payment>(response);
+}
+
+export async function updatePayment(paymentId: string, data: PaymentUpdate): Promise<Payment> {
+  const response = await fetch(`${API_BASE_URL}/api/payments/${paymentId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  
+  return handleResponse<Payment>(response);
+}
+
+export async function deletePayment(paymentId: string): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/api/payments/${paymentId}`, {
+    method: 'DELETE',
+  });
+  
+  return handleResponse<void>(response);
+}
+
+export async function markFamilyAsPaid(
+  familyId: string,
+  schoolYear: string,
+  amountPaid?: number,
+  paymentMethod?: string,
+  notes?: string
+): Promise<Payment> {
+  const searchParams = new URLSearchParams();
+  searchParams.set('school_year', schoolYear);
+  if (amountPaid !== undefined) searchParams.set('amount_paid', amountPaid.toString());
+  if (paymentMethod) searchParams.set('payment_method', paymentMethod);
+  if (notes) searchParams.set('notes', notes);
+  
+  const response = await fetch(
+    `${API_BASE_URL}/api/payments/mark-paid/${familyId}?${searchParams.toString()}`,
+    { method: 'POST' }
+  );
+  
+  return handleResponse<Payment>(response);
+}
+
+export function getPaymentsExportUrl(schoolYear?: string, paymentStatus?: string): string {
+  const searchParams = new URLSearchParams();
+  if (schoolYear) searchParams.set('school_year', schoolYear);
+  if (paymentStatus) searchParams.set('payment_status', paymentStatus);
+  return `${API_BASE_URL}/api/payments/export/csv?${searchParams.toString()}`;
+}
+
+export async function getFamilyPayments(familyId: string): Promise<Payment[]> {
+  const response = await fetch(`${API_BASE_URL}/api/families/${familyId}/payments`, {
+    cache: 'no-store',
+  });
+  
+  return handleResponse<Payment[]>(response);
+}
+
+// --- Families with Payment Status API ---
+
+export async function getFamiliesWithPayments(
+  params: FamilyWithPaymentQueryParams = {}
+): Promise<PaginatedFamilyWithPaymentResponse> {
+  const searchParams = new URLSearchParams();
+  
+  if (params.page) searchParams.set('page', params.page.toString());
+  if (params.page_size) searchParams.set('page_size', params.page_size.toString());
+  if (params.search) searchParams.set('search', params.search);
+  if (params.sort_by) searchParams.set('sort_by', params.sort_by);
+  if (params.sort_order) searchParams.set('sort_order', params.sort_order);
+  if (params.payment_status) searchParams.set('payment_status', params.payment_status);
+  if (params.school_year) searchParams.set('school_year', params.school_year);
+  
+  const response = await fetch(
+    `${API_BASE_URL}/api/families/with-payments?${searchParams.toString()}`,
+    { cache: 'no-store' }
+  );
+  
+  return handleResponse<PaginatedFamilyWithPaymentResponse>(response);
+}
+
+// --- Manual Enrollment API ---
+
+export async function getStudentsWithEnrollments(
+  search?: string,
+  familyId?: string
+): Promise<StudentEnrollmentInfo[]> {
+  const searchParams = new URLSearchParams();
+  if (search) searchParams.set('search', search);
+  if (familyId) searchParams.set('family_id', familyId);
+  
+  const response = await fetch(
+    `${API_BASE_URL}/api/enrollments/students?${searchParams.toString()}`,
+    { cache: 'no-store' }
+  );
+  
+  return handleResponse<StudentEnrollmentInfo[]>(response);
+}
+
+export async function manualEnrollStudent(
+  data: ManualEnrollmentCreate
+): Promise<ManualEnrollmentResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/enrollments/manual`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  
+  return handleResponse<ManualEnrollmentResponse>(response);
+}
+
+export async function bulkEnrollStudents(
+  data: BulkEnrollmentCreate
+): Promise<BulkEnrollmentResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/enrollments/bulk`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  
+  return handleResponse<BulkEnrollmentResponse>(response);
+}
+
+export async function getStudentEnrollments(studentId: string): Promise<ClassItem[]> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/enrollments/student/${studentId}/classes`,
+    { cache: 'no-store' }
+  );
+  
+  return handleResponse<ClassItem[]>(response);
+}
+
+export async function removeEnrollment(studentId: string, classId: string): Promise<void> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/enrollments/${studentId}/${classId}`,
+    { method: 'DELETE' }
+  );
+  
+  return handleResponse<void>(response);
 }
 
 export { ApiError };

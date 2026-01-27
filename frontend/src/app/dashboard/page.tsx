@@ -1,13 +1,14 @@
 'use client';
 
 import { useState } from 'react';
-import { Users, GraduationCap } from 'lucide-react';
+import { Users, GraduationCap, DollarSign } from 'lucide-react';
 import DashboardHeader from './components/DashboardHeader';
-import FamilyList from './components/FamilyList';
+import FamilyListWithPayments from './components/FamilyListWithPayments';
 import ClassList from './components/ClassList';
+import PaymentList from './components/PaymentList';
 import { AcademicYear } from '@/types/family';
 
-type TabType = 'families' | 'classes';
+type TabType = 'families' | 'classes' | 'payments';
 
 export default function DashboardPage() {
   const [selectedYear, setSelectedYear] = useState<AcademicYear | null>(null);
@@ -16,6 +17,7 @@ export default function DashboardPage() {
   const tabs = [
     { id: 'families' as TabType, label: 'Families', icon: Users },
     { id: 'classes' as TabType, label: 'Classes', icon: GraduationCap },
+    { id: 'payments' as TabType, label: 'Payments', icon: DollarSign },
   ];
 
   return (
@@ -52,8 +54,9 @@ export default function DashboardPage() {
       </div>
 
       <main>
-        {activeTab === 'families' && <FamilyList selectedYear={selectedYear} />}
+        {activeTab === 'families' && <FamilyListWithPayments selectedYear={selectedYear} />}
         {activeTab === 'classes' && <ClassList selectedYear={selectedYear} />}
+        {activeTab === 'payments' && <PaymentList selectedYear={selectedYear} />}
       </main>
     </div>
   );

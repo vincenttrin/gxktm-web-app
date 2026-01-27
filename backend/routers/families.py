@@ -7,7 +7,7 @@ from sqlalchemy.orm import selectinload
 import math
 
 from database import get_db
-from models import Family, Guardian, EmergencyContact, Student, AcademicYear
+from models import Family, Guardian, EmergencyContact, Student, AcademicYear, Payment, Enrollment
 from schemas import (
     FamilyCreate,
     FamilyUpdate,
@@ -23,6 +23,11 @@ from schemas import (
     EmergencyContactUpdate,
     EmergencyContactResponse,
     AcademicYearResponse,
+    FamilyWithPaymentResponse,
+    PaginatedFamilyWithPaymentResponse,
+    FamilyPaymentStatus,
+    PaymentStatusEnum,
+    PaymentResponse,
 )
 
 router = APIRouter(prefix="/api/families", tags=["families"])
@@ -118,6 +123,127 @@ async def get_all_families(
     families = result.scalars().all()
     
     return families
+
+
+@router.get("/with-payments", response_model=PaginatedFamilyWithPaymentResponse)
+async def get_families_with_payments(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(12, ge=1, le=100),
+    search: Optional[str] = Query(None),
+    sort_by: Optional[str] = Query("family_name"),
+    sort_order: Optional[str] = Query("asc"),
+    payment_status: Optional[PaymentStatusEnum] = Query(None),
+    school_year: Optional[str] = Query(None),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get all families with their payment status for the current school year."""
+    
+    # Base query with eager loading
+    query = select(Family).options(
+        selectinload(Family.guardians),
+        selectinload(Family.students).selectinload(Student.enrollments),
+        selectinload(Family.emergency_contacts),
+        selectinload(Family.payments),
+    )
+    
+    # Apply search filter
+    if search:
+        search_pattern = f"%{search}%"
+        query = query.where(
+            or_(
+                Family.family_name.ilike(search_pattern),
+                Family.city.ilike(search_pattern),
+                Family.state.ilike(search_pattern),
+            )
+        )
+    
+    # Apply sorting
+    sort_column = getattr(Family, sort_by, Family.family_name)
+    if sort_order == "desc":
+        sort_column = sort_column.desc()
+    query = query.order_by(sort_column)
+    
+    # Get total count (before pagination)
+    count_query = select(func.count()).select_from(Family)
+    if search:
+        search_pattern = f"%{search}%"
+        count_query = count_query.where(
+            or_(
+                Family.family_name.ilike(search_pattern),
+                Family.city.ilike(search_pattern),
+                Family.state.ilike(search_pattern),
+            )
+        )
+    
+    total_result = await db.execute(count_query)
+    total = total_result.scalar() or 0
+    
+    # Apply pagination
+    offset = (page - 1) * page_size
+    query = query.offset(offset).limit(page_size)
+    
+    result = await db.execute(query)
+    families = result.scalars().all()
+    
+    # Build response with payment status
+    family_items = []
+    for family in families:
+        # Get payment for school year
+        payment_info = None
+        if school_year:
+            for payment in family.payments:
+                if payment.school_year == school_year:
+                    payment_info = FamilyPaymentStatus(
+                        payment_status=PaymentStatusEnum(payment.payment_status),
+                        amount_due=payment.amount_due,
+                        amount_paid=payment.amount_paid,
+                        school_year=payment.school_year,
+                    )
+                    break
+        
+        # If no payment record exists, consider as unpaid
+        if not payment_info and school_year:
+            payment_info = FamilyPaymentStatus(
+                payment_status=PaymentStatusEnum.UNPAID,
+                amount_due=None,
+                amount_paid=0,
+                school_year=school_year,
+            )
+        
+        # Count enrolled classes
+        enrolled_count = 0
+        for student in family.students:
+            enrolled_count += len(student.enrollments)
+        
+        # Apply payment status filter
+        if payment_status and payment_info:
+            if payment_info.payment_status != payment_status:
+                continue
+        
+        family_items.append({
+            "id": family.id,
+            "family_name": family.family_name,
+            "address": family.address,
+            "city": family.city,
+            "state": family.state,
+            "zip_code": family.zip_code,
+            "diocese_id": family.diocese_id,
+            "guardians": family.guardians,
+            "students": family.students,
+            "emergency_contacts": family.emergency_contacts,
+            "payment_status": payment_info,
+            "enrolled_class_count": enrolled_count,
+        })
+    
+    total_pages = math.ceil(total / page_size) if total > 0 else 1
+    
+    return PaginatedFamilyWithPaymentResponse(
+        items=family_items,
+        total=total,
+        page=page,
+        page_size=page_size,
+        total_pages=total_pages,
+    )
 
 
 @router.get("/{family_id}", response_model=FamilyResponse)
@@ -500,3 +626,23 @@ async def get_current_academic_year(db: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=404, detail="No current academic year set")
     
     return year
+
+
+# --- Family Payment History ---
+
+@router.get("/{family_id}/payments", response_model=list[PaymentResponse])
+async def get_family_payments(
+    family_id: UUID, db: AsyncSession = Depends(get_db)
+):
+    """Get payment history for a family."""
+    # Verify family exists
+    family_result = await db.execute(select(Family).where(Family.id == family_id))
+    if not family_result.scalar_one_or_none():
+        raise HTTPException(status_code=404, detail="Family not found")
+    
+    result = await db.execute(
+        select(Payment)
+        .where(Payment.family_id == family_id)
+        .order_by(Payment.school_year.desc())
+    )
+    return result.scalars().all()

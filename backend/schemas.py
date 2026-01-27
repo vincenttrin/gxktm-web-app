@@ -1,7 +1,16 @@
 from pydantic import BaseModel, Field
-from datetime import date
+from datetime import date, datetime
 from typing import Optional, List
 from uuid import UUID
+from enum import Enum
+from decimal import Decimal
+
+
+class PaymentStatusEnum(str, Enum):
+    UNPAID = "unpaid"
+    PARTIAL = "partial"
+    PAID = "paid"
+    REFUNDED = "refunded"
 
 
 # --- Guardian/Parent Schemas ---
@@ -309,3 +318,127 @@ class EnrollmentSubmissionResponse(BaseModel):
     family_id: UUID
     enrollment_ids: List[UUID]
     message: str
+
+
+# --- Payment Schemas ---
+
+class PaymentBase(BaseModel):
+    family_id: UUID
+    school_year: str
+    amount_due: Optional[Decimal] = None
+    amount_paid: Optional[Decimal] = Field(default=Decimal("0"))
+    payment_date: Optional[date] = None
+    payment_method: Optional[str] = None
+    notes: Optional[str] = None
+
+
+class PaymentCreate(PaymentBase):
+    pass
+
+
+class PaymentUpdate(BaseModel):
+    amount_due: Optional[Decimal] = None
+    amount_paid: Optional[Decimal] = None
+    payment_status: Optional[PaymentStatusEnum] = None
+    payment_date: Optional[date] = None
+    payment_method: Optional[str] = None
+    notes: Optional[str] = None
+
+
+class PaymentResponse(BaseModel):
+    id: UUID
+    family_id: UUID
+    school_year: str
+    amount_due: Optional[Decimal] = None
+    amount_paid: Optional[Decimal] = None
+    payment_status: str
+    payment_date: Optional[date] = None
+    payment_method: Optional[str] = None
+    notes: Optional[str] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+    family_name: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class PaymentWithFamily(PaymentResponse):
+    family_name: Optional[str] = None
+
+
+class PaginatedPaymentResponse(BaseModel):
+    items: List[PaymentResponse]
+    total: int
+    page: int
+    page_size: int
+    total_pages: int
+
+
+class PaymentSummary(BaseModel):
+    total_families: int
+    paid_count: int
+    partial_count: int
+    unpaid_count: int
+    total_amount_due: float
+    total_amount_paid: float
+
+
+# --- Family with Payment Status Schemas ---
+
+class FamilyPaymentStatus(BaseModel):
+    payment_status: PaymentStatusEnum
+    amount_due: Optional[Decimal] = None
+    amount_paid: Optional[Decimal] = None
+    school_year: str
+
+
+class FamilyWithPaymentResponse(FamilyResponse):
+    payment_status: Optional[FamilyPaymentStatus] = None
+    enrolled_class_count: int = 0
+
+
+class PaginatedFamilyWithPaymentResponse(BaseModel):
+    items: List[FamilyWithPaymentResponse]
+    total: int
+    page: int
+    page_size: int
+    total_pages: int
+
+
+# --- Manual Enrollment Schemas ---
+
+class ManualEnrollmentCreate(BaseModel):
+    student_id: UUID
+    class_ids: List[UUID]
+
+
+class ManualEnrollmentResponse(BaseModel):
+    student_id: UUID
+    enrolled_class_ids: List[str]
+    already_enrolled_class_ids: List[str]
+    message: str
+
+
+class BulkEnrollmentCreate(BaseModel):
+    class_id: UUID
+    student_ids: List[UUID]
+
+
+class BulkEnrollmentResponse(BaseModel):
+    class_id: UUID
+    enrolled_student_ids: List[str]
+    already_enrolled_student_ids: List[str]
+    message: str
+
+
+class StudentEnrollmentInfo(BaseModel):
+    id: UUID
+    family_id: UUID
+    first_name: str
+    last_name: str
+    family_name: Optional[str] = None
+    enrolled_classes: List[ClassResponse] = []
+
+    class Config:
+        from_attributes = True
