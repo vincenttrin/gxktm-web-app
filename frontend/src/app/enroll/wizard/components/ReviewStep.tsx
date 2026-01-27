@@ -5,7 +5,7 @@ import { submitEnrollment, EnrollmentSubmissionRequest } from '@/lib/enrollmentA
 
 export function ReviewStep() {
   const { state, setStep, goToPreviousStep, setSubmitting, setError } = useEnrollment();
-  const { formState, academicYear, existingFamily, isLoading, isSubmitting } = state;
+  const { formState, academicYear, isLoading, isSubmitting } = state;
   const { family, guardians, children, emergencyContacts, classSelections } = formState;
   
   const handleSubmit = async () => {
@@ -20,7 +20,7 @@ export function ReviewStep() {
     try {
       // Build the submission request
       const request: EnrollmentSubmissionRequest = {
-        family_id: existingFamily?.id || null,
+        family_id: family.id || null,
         family_info: {
           family_name: family.family_name || null,
           address: family.address || null,

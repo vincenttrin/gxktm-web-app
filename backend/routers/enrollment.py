@@ -9,7 +9,7 @@ This router provides endpoints for:
 - Grade progression logic
 """
 
-from uuid import UUID
+from uuid import UUID, uuid4
 from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -28,6 +28,22 @@ from schemas import (
 )
 
 router = APIRouter(prefix="/api/enrollment", tags=["enrollment"])
+
+
+# --- Helper Functions ---
+
+def try_parse_uuid(id_str: Optional[str]) -> Optional[UUID]:
+    """
+    Try to parse a string as a UUID.
+    Returns None if the string is None, empty, or not a valid UUID.
+    This handles temporary IDs like 'new-123456' gracefully.
+    """
+    if not id_str:
+        return None
+    try:
+        return UUID(id_str)
+    except (ValueError, AttributeError):
+        return None
 
 
 # --- Helper Functions ---
@@ -393,17 +409,18 @@ async def submit_enrollment(
         # Process submitted guardians
         submitted_guardian_ids = set()
         for guardian_data in request.guardians:
-            if guardian_data.id and guardian_data.id in existing_guardian_ids:
+            guardian_uuid = try_parse_uuid(guardian_data.id)
+            if guardian_uuid and guardian_uuid in existing_guardian_ids:
                 # Update existing guardian
                 guardian_result = await db.execute(
-                    select(Guardian).where(Guardian.id == guardian_data.id)
+                    select(Guardian).where(Guardian.id == guardian_uuid)
                 )
                 guardian = guardian_result.scalar_one()
                 guardian.name = guardian_data.name
                 guardian.email = guardian_data.email
                 guardian.phone = guardian_data.phone
                 guardian.relationship_to_family = guardian_data.relationship_to_family
-                submitted_guardian_ids.add(guardian_data.id)
+                submitted_guardian_ids.add(guardian_uuid)
             else:
                 # Create new guardian
                 new_guardian = Guardian(
@@ -439,14 +456,16 @@ async def submit_enrollment(
             existing_student_ids = {s.id for s in existing_students}
         
         # Map to store student IDs for enrollment creation
-        student_id_map = {}  # Maps submitted index to actual student ID
+        # Maps submitted ID (string) to actual database student ID (UUID)
+        student_id_map = {}
         
         submitted_student_ids = set()
         for idx, student_data in enumerate(request.students):
-            if student_data.id and student_data.id in existing_student_ids:
+            student_uuid = try_parse_uuid(student_data.id)
+            if student_uuid and student_uuid in existing_student_ids:
                 # Update existing student
                 student_result = await db.execute(
-                    select(Student).where(Student.id == student_data.id)
+                    select(Student).where(Student.id == student_uuid)
                 )
                 student = student_result.scalar_one()
                 student.first_name = student_data.first_name
@@ -458,7 +477,8 @@ async def submit_enrollment(
                 student.grade_level = student_data.grade_level
                 student.american_school = student_data.american_school
                 student.notes = student_data.notes or student_data.special_needs
-                submitted_student_ids.add(student_data.id)
+                submitted_student_ids.add(student_uuid)
+                # Map the string ID to the UUID for class selection lookup
                 student_id_map[student_data.id] = student.id
             else:
                 # Create new student
@@ -477,8 +497,7 @@ async def submit_enrollment(
                 )
                 db.add(new_student)
                 await db.flush()
-                student_id_map[new_student.id] = new_student.id
-                # Store temporary reference for class selections
+                # Map the temporary string ID to the new UUID
                 if student_data.id:
                     student_id_map[student_data.id] = new_student.id
         
@@ -503,17 +522,18 @@ async def submit_enrollment(
         
         submitted_ec_ids = set()
         for ec_data in request.emergency_contacts:
-            if ec_data.id and ec_data.id in existing_ec_ids:
+            ec_uuid = try_parse_uuid(ec_data.id)
+            if ec_uuid and ec_uuid in existing_ec_ids:
                 # Update existing emergency contact
                 ec_result = await db.execute(
-                    select(EmergencyContact).where(EmergencyContact.id == ec_data.id)
+                    select(EmergencyContact).where(EmergencyContact.id == ec_uuid)
                 )
                 ec = ec_result.scalar_one()
                 ec.name = ec_data.name
                 ec.email = ec_data.email
                 ec.phone = ec_data.phone
                 ec.relationship_to_family = ec_data.relationship_to_family
-                submitted_ec_ids.add(ec_data.id)
+                submitted_ec_ids.add(ec_uuid)
             else:
                 # Create new emergency contact
                 new_ec = EmergencyContact(
@@ -576,7 +596,16 @@ async def submit_enrollment(
         
         # Create new enrollments based on class selections
         for selection in request.class_selections:
-            student_id = student_id_map.get(selection.student_id, selection.student_id)
+            # Look up the actual UUID from our mapping
+            student_id = student_id_map.get(selection.student_id)
+            
+            if not student_id:
+                # If not in map, try to parse as UUID (for existing students)
+                student_id = try_parse_uuid(selection.student_id)
+            
+            if not student_id:
+                # Skip if we can't resolve the student ID
+                continue
             
             # Create Giao Ly enrollment if level selected
             if selection.giao_ly_level and selection.giao_ly_level in giao_ly_classes:

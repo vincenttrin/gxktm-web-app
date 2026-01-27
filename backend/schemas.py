@@ -238,7 +238,7 @@ class ClassWithEnrollments(ClassResponse):
 # --- Enrollment Submission Schemas (for public enrollment portal) ---
 class EnrollmentGuardianSubmission(BaseModel):
     """Guardian data for enrollment submission. ID is optional for new guardians."""
-    id: Optional[UUID] = None
+    id: Optional[str] = None  # Can be a UUID string for existing or temp ID for new
     name: str
     email: Optional[str] = None
     phone: Optional[str] = None
@@ -247,7 +247,7 @@ class EnrollmentGuardianSubmission(BaseModel):
 
 class EnrollmentEmergencyContactSubmission(BaseModel):
     """Emergency contact data for enrollment submission. ID is optional for new contacts."""
-    id: Optional[UUID] = None
+    id: Optional[str] = None  # Can be a UUID string for existing or temp ID for new
     name: str
     email: Optional[str] = None
     phone: str
@@ -256,7 +256,7 @@ class EnrollmentEmergencyContactSubmission(BaseModel):
 
 class EnrollmentStudentSubmission(BaseModel):
     """Student data for enrollment submission. ID is optional for new students."""
-    id: Optional[UUID] = None
+    id: Optional[str] = None  # Can be a UUID string for existing or temp ID (e.g., "new-123") for new
     first_name: str
     last_name: str
     middle_name: Optional[str] = None
@@ -272,7 +272,7 @@ class EnrollmentStudentSubmission(BaseModel):
 
 class ClassSelectionSubmission(BaseModel):
     """Class selection for a student during enrollment."""
-    student_id: UUID  # Must be a valid student ID
+    student_id: str  # Can be a UUID for existing students or a temp ID (e.g., "new-123") for new students
     giao_ly_level: Optional[int] = None  # 1-9, None means not enrolling
     viet_ngu_level: Optional[int] = None  # 1-9, None means not enrolling
     giao_ly_completed: bool = False  # True if already completed all levels

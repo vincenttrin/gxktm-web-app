@@ -160,7 +160,7 @@ export function ConfirmationStep() {
       {/* Action Button */}
       <div className="flex justify-center pt-4">
         <Link 
-          href="/enroll"
+          href="https://www.gxktm.org/"
           className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-8 py-3 text-sm font-medium text-white shadow-sm hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all"
         >
           <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
