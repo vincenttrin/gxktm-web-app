@@ -10,7 +10,7 @@ from models import Program, Student, Enrollment, Family
 from routers.families import router as families_router, academic_year_router
 from routers.classes import router as classes_router, program_router
 from routers.payments import router as payments_router
-from routers.enrollments import router as enrollments_router
+from routers.admin_enrollments import router as enrollments_router
 
 
 app = FastAPI(title="Sunday School Admin API", version="1.0.0")
