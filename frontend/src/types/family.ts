@@ -299,3 +299,45 @@ export interface ClassQueryParams {
   academic_year_id?: number;
   program_id?: number;
 }
+
+
+// --- Enrolled Family Payment Types (for payment tracking) ---
+
+export interface EnrolledFamilyGuardian {
+  name: string;
+}
+
+export interface EnrolledFamilyStudent {
+  first_name: string;
+  last_name: string;
+}
+
+export interface EnrolledFamilyPayment {
+  id: string;
+  family_name: string | null;
+  guardians: EnrolledFamilyGuardian[];
+  students: EnrolledFamilyStudent[];
+  enrolled_count: number;
+  payment_status: PaymentStatus;
+  amount_due: number | null;
+  amount_paid: number;
+  payment_date: string | null;
+  payment_method: string | null;
+}
+
+export interface EnrolledFamiliesResponse {
+  items: EnrolledFamilyPayment[];
+  total: number;
+  academic_year_id: number;
+  academic_year_name: string;
+}
+
+export interface EnrolledFamiliesSummary {
+  total_enrolled_families: number;
+  paid_count: number;
+  partial_count: number;
+  unpaid_count: number;
+  total_amount_due: number;
+  total_amount_paid: number;
+  academic_year_name: string;
+}

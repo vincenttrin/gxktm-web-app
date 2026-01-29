@@ -22,7 +22,7 @@ from sqlalchemy.orm import selectinload
 import math
 
 from database import get_db
-from models import Payment, Family, PaymentStatus
+from models import Payment, Family, PaymentStatus, Student, Enrollment, Class, AcademicYear, Guardian
 from schemas import (
     PaymentCreate,
     PaymentUpdate,
@@ -31,6 +31,9 @@ from schemas import (
     PaginatedPaymentResponse,
     PaymentSummary,
     PaymentStatusEnum,
+    EnrolledFamilyPayment,
+    EnrolledFamiliesResponse,
+    EnrolledFamiliesSummary,
 )
 
 router = APIRouter(prefix="/api/payments", tags=["payments"])
@@ -160,6 +163,136 @@ async def get_payment_summary(
     )
 
 
+# --- Enrolled Families (for payment tracking) ---
+
+@router.get("/enrolled-families", response_model=EnrolledFamiliesResponse)
+async def get_enrolled_families(
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Get all families that have students enrolled in classes for the current academic year.
+    This endpoint is specifically for payment tracking - only shows families who need to pay.
+    Returns family info, guardian names, student names, enrollment count, and payment status.
+    """
+    # Get current academic year
+    year_result = await db.execute(
+        select(AcademicYear).where(AcademicYear.is_current == True)
+    )
+    current_year = year_result.scalar_one_or_none()
+    
+    if not current_year:
+        raise HTTPException(status_code=404, detail="No current academic year configured")
+    
+    # Get all classes for current year
+    classes_result = await db.execute(
+        select(Class.id).where(Class.academic_year_id == current_year.id)
+    )
+    current_year_class_ids = [row[0] for row in classes_result.fetchall()]
+    
+    if not current_year_class_ids:
+        return EnrolledFamiliesResponse(
+            items=[],
+            total=0,
+            academic_year_id=current_year.id,
+            academic_year_name=current_year.name,
+        )
+    
+    # Get families with enrollments in current year classes
+    # This query finds distinct families that have at least one student enrolled
+    enrolled_families_query = (
+        select(Family)
+        .options(
+            selectinload(Family.guardians),
+            selectinload(Family.students).selectinload(Student.enrollments),
+            selectinload(Family.payments),
+        )
+        .join(Student, Student.family_id == Family.id)
+        .join(Enrollment, Enrollment.student_id == Student.id)
+        .where(Enrollment.class_id.in_(current_year_class_ids))
+        .distinct()
+    )
+    
+    result = await db.execute(enrolled_families_query)
+    families = result.scalars().unique().all()
+    
+    # Build response with payment info
+    enrolled_family_items = []
+    school_year = current_year.name
+    
+    for family in families:
+        # Count enrolled students
+        enrolled_students = set()
+        for student in family.students:
+            for enrollment in student.enrollments if hasattr(student, 'enrollments') else []:
+                if enrollment.class_id in current_year_class_ids:
+                    enrolled_students.add(student.id)
+                    break
+        
+        # Get payment info for this school year
+        payment = next(
+            (p for p in family.payments if p.school_year == school_year),
+            None
+        )
+        
+        enrolled_family_items.append(EnrolledFamilyPayment(
+            id=family.id,
+            family_name=family.family_name,
+            guardians=[{"name": g.name} for g in family.guardians],
+            students=[{"first_name": s.first_name, "last_name": s.last_name} for s in family.students],
+            enrolled_count=len(enrolled_students) if enrolled_students else len(family.students),
+            payment_status=payment.payment_status if payment else "unpaid",
+            amount_due=float(payment.amount_due) if payment and payment.amount_due else None,
+            amount_paid=float(payment.amount_paid) if payment and payment.amount_paid else 0,
+            payment_date=payment.payment_date if payment else None,
+            payment_method=payment.payment_method if payment else None,
+        ))
+    
+    # Sort by family name
+    enrolled_family_items.sort(key=lambda f: f.family_name or "")
+    
+    return EnrolledFamiliesResponse(
+        items=enrolled_family_items,
+        total=len(enrolled_family_items),
+        academic_year_id=current_year.id,
+        academic_year_name=current_year.name,
+    )
+
+
+@router.get("/enrolled-families/summary", response_model=EnrolledFamiliesSummary)
+async def get_enrolled_families_summary(
+    db: AsyncSession = Depends(get_db),
+):
+    """Get summary statistics for enrolled families payment tracking."""
+    # Get current academic year
+    year_result = await db.execute(
+        select(AcademicYear).where(AcademicYear.is_current == True)
+    )
+    current_year = year_result.scalar_one_or_none()
+    
+    if not current_year:
+        raise HTTPException(status_code=404, detail="No current academic year configured")
+    
+    # Get enrolled families data
+    enrolled_data = await get_enrolled_families(db)
+    
+    # Calculate summary
+    paid_count = sum(1 for f in enrolled_data.items if f.payment_status == "paid")
+    partial_count = sum(1 for f in enrolled_data.items if f.payment_status == "partial")
+    unpaid_count = sum(1 for f in enrolled_data.items if f.payment_status == "unpaid")
+    total_amount_due = sum(f.amount_due or 0 for f in enrolled_data.items)
+    total_amount_paid = sum(f.amount_paid or 0 for f in enrolled_data.items)
+    
+    return EnrolledFamiliesSummary(
+        total_enrolled_families=enrolled_data.total,
+        paid_count=paid_count,
+        partial_count=partial_count,
+        unpaid_count=unpaid_count,
+        total_amount_due=total_amount_due,
+        total_amount_paid=total_amount_paid,
+        academic_year_name=current_year.name,
+    )
+
+
 @router.post("", response_model=PaymentResponse, status_code=201)
 async def create_payment(
     payment_data: PaymentCreate,
@@ -277,8 +410,6 @@ async def delete_payment(
     await db.commit()
     return None
 
-
-# --- Quick Actions ---
 
 @router.post("/mark-paid/{family_id}", response_model=PaymentResponse)
 async def mark_family_as_paid(

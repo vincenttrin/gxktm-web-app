@@ -471,6 +471,31 @@ export async function getFamilyPayments(familyId: string): Promise<Payment[]> {
   return handleResponse<Payment[]>(response);
 }
 
+// --- Enrolled Families Payment API ---
+
+import type {
+  EnrolledFamiliesResponse,
+  EnrolledFamiliesSummary,
+} from '@/types/family';
+
+export async function getEnrolledFamilies(): Promise<EnrolledFamiliesResponse> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/payments/enrolled-families`,
+    { cache: 'no-store' }
+  );
+  
+  return handleResponse<EnrolledFamiliesResponse>(response);
+}
+
+export async function getEnrolledFamiliesSummary(): Promise<EnrolledFamiliesSummary> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/payments/enrolled-families/summary`,
+    { cache: 'no-store' }
+  );
+  
+  return handleResponse<EnrolledFamiliesSummary>(response);
+}
+
 // --- Families with Payment Status API ---
 
 export async function getFamiliesWithPayments(

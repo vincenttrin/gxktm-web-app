@@ -442,3 +442,58 @@ class StudentEnrollmentInfo(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+# --- Enrolled Family Payment Schemas ---
+
+class GuardianSimple(BaseModel):
+    """Simplified guardian info for payment tracking."""
+    name: str
+    
+    class Config:
+        from_attributes = True
+
+
+class StudentSimple(BaseModel):
+    """Simplified student info for payment tracking."""
+    first_name: str
+    last_name: str
+    
+    class Config:
+        from_attributes = True
+
+
+class EnrolledFamilyPayment(BaseModel):
+    """Family with enrollment and payment info for payment tracking."""
+    id: UUID
+    family_name: Optional[str] = None
+    guardians: List[GuardianSimple] = []
+    students: List[StudentSimple] = []
+    enrolled_count: int = 0  # Number of students enrolled
+    payment_status: str = "unpaid"  # unpaid, partial, paid
+    amount_due: Optional[float] = None
+    amount_paid: float = 0
+    payment_date: Optional[datetime] = None
+    payment_method: Optional[str] = None
+    
+    class Config:
+        from_attributes = True
+
+
+class EnrolledFamiliesResponse(BaseModel):
+    """Response for enrolled families endpoint."""
+    items: List[EnrolledFamilyPayment]
+    total: int
+    academic_year_id: int
+    academic_year_name: str
+
+
+class EnrolledFamiliesSummary(BaseModel):
+    """Summary stats for enrolled families."""
+    total_enrolled_families: int
+    paid_count: int
+    partial_count: int
+    unpaid_count: int
+    total_amount_due: float
+    total_amount_paid: float
+    academic_year_name: str
