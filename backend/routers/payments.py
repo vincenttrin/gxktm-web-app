@@ -34,6 +34,8 @@ from schemas import (
     EnrolledFamilyPayment,
     EnrolledFamiliesResponse,
     EnrolledFamiliesSummary,
+    StudentWithEnrollmentStatus,
+    EnrolledClassInfo,
 )
 
 router = APIRouter(prefix="/api/payments", tags=["payments"])
@@ -203,7 +205,7 @@ async def get_enrolled_families(
         select(Family)
         .options(
             selectinload(Family.guardians),
-            selectinload(Family.students).selectinload(Student.enrollments),
+            selectinload(Family.students).selectinload(Student.enrollments).selectinload(Enrollment.assigned_class),
             selectinload(Family.payments),
         )
         .join(Student, Student.family_id == Family.id)
@@ -215,18 +217,53 @@ async def get_enrolled_families(
     result = await db.execute(enrolled_families_query)
     families = result.scalars().unique().all()
     
+    # Build class cache with program names for quick lookup
+    class_cache = {}
+    classes_result = await db.execute(
+        select(Class)
+        .options(selectinload(Class.program))
+        .where(Class.id.in_(current_year_class_ids))
+    )
+    for cls in classes_result.scalars().all():
+        class_cache[cls.id] = {
+            "id": cls.id,
+            "name": cls.name,
+            "program_name": cls.program.name if cls.program else None,
+        }
+    
     # Build response with payment info
     enrolled_family_items = []
     school_year = current_year.name
     
     for family in families:
-        # Count enrolled students
-        enrolled_students = set()
+        # Build enriched student data with enrollment status
+        students_with_status = []
+        enrolled_count = 0
+        
         for student in family.students:
+            # Find enrolled classes for this student in current year
+            student_enrolled_classes = []
             for enrollment in student.enrollments if hasattr(student, 'enrollments') else []:
                 if enrollment.class_id in current_year_class_ids:
-                    enrolled_students.add(student.id)
-                    break
+                    class_info = class_cache.get(enrollment.class_id)
+                    if class_info:
+                        student_enrolled_classes.append(EnrolledClassInfo(
+                            id=class_info["id"],
+                            name=class_info["name"],
+                            program_name=class_info["program_name"],
+                        ))
+            
+            is_enrolled = len(student_enrolled_classes) > 0
+            if is_enrolled:
+                enrolled_count += 1
+            
+            students_with_status.append(StudentWithEnrollmentStatus(
+                id=student.id,
+                first_name=student.first_name,
+                last_name=student.last_name,
+                is_enrolled=is_enrolled,
+                enrolled_classes=student_enrolled_classes,
+            ))
         
         # Get payment info for this school year
         payment = next(
@@ -238,8 +275,8 @@ async def get_enrolled_families(
             id=family.id,
             family_name=family.family_name,
             guardians=[{"name": g.name} for g in family.guardians],
-            students=[{"first_name": s.first_name, "last_name": s.last_name} for s in family.students],
-            enrolled_count=len(enrolled_students) if enrolled_students else len(family.students),
+            students=students_with_status,
+            enrolled_count=enrolled_count,
             payment_status=payment.payment_status if payment else "unpaid",
             amount_due=float(payment.amount_due) if payment and payment.amount_due else None,
             amount_paid=float(payment.amount_paid) if payment and payment.amount_paid else 0,

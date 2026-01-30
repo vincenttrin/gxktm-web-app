@@ -208,14 +208,14 @@ export default function FamilyListWithPayments({ selectedYear }: FamilyListWithP
         </div>
         
         <div className="flex items-center gap-2">
-          <Filter className="h-5 w-5 text-gray-400" />
+          <Filter className="h-5 w-5 text-gray-700" />
           <select
             value={paymentStatusFilter}
             onChange={(e) => {
               setPaymentStatusFilter(e.target.value as PaymentStatus | '');
               setCurrentPage(1);
             }}
-            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white"
+            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white text-gray-700"
           >
             <option value="">All Payment Status</option>
             <option value="paid">Paid</option>
@@ -225,7 +225,7 @@ export default function FamilyListWithPayments({ selectedYear }: FamilyListWithP
         </div>
         
         <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-500">Sort by:</span>
+          <span className="text-sm text-gray-700">Sort by:</span>
           <SortButton field="family_name" label="Name" />
           <SortButton field="city" label="City" />
           <SortButton field="state" label="State" />

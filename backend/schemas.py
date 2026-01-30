@@ -454,6 +454,29 @@ class GuardianSimple(BaseModel):
         from_attributes = True
 
 
+class EnrolledClassInfo(BaseModel):
+    """Class info for enrolled student."""
+    id: UUID
+    name: str
+    program_name: Optional[str] = None
+    
+    class Config:
+        from_attributes = True
+
+
+class StudentWithEnrollmentStatus(BaseModel):
+    """Student info with enrollment status for payment tracking."""
+    id: UUID
+    first_name: str
+    last_name: str
+    is_enrolled: bool = False  # Whether enrolled in current year
+    enrolled_classes: List[EnrolledClassInfo] = []  # Classes enrolled in
+    
+    class Config:
+        from_attributes = True
+
+
+# Keep StudentSimple for backward compatibility
 class StudentSimple(BaseModel):
     """Simplified student info for payment tracking."""
     first_name: str
@@ -468,7 +491,7 @@ class EnrolledFamilyPayment(BaseModel):
     id: UUID
     family_name: Optional[str] = None
     guardians: List[GuardianSimple] = []
-    students: List[StudentSimple] = []
+    students: List[StudentWithEnrollmentStatus] = []  # Updated to include enrollment status
     enrolled_count: int = 0  # Number of students enrolled
     payment_status: str = "unpaid"  # unpaid, partial, paid
     amount_due: Optional[float] = None

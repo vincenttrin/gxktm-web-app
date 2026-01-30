@@ -307,6 +307,21 @@ export interface EnrolledFamilyGuardian {
   name: string;
 }
 
+export interface EnrolledClassInfo {
+  id: string;
+  name: string;
+  program_name: string | null;
+}
+
+export interface StudentWithEnrollmentStatus {
+  id: string;
+  first_name: string;
+  last_name: string;
+  is_enrolled: boolean;
+  enrolled_classes: EnrolledClassInfo[];
+}
+
+// Keep for backward compatibility
 export interface EnrolledFamilyStudent {
   first_name: string;
   last_name: string;
@@ -316,7 +331,7 @@ export interface EnrolledFamilyPayment {
   id: string;
   family_name: string | null;
   guardians: EnrolledFamilyGuardian[];
-  students: EnrolledFamilyStudent[];
+  students: StudentWithEnrollmentStatus[];
   enrolled_count: number;
   payment_status: PaymentStatus;
   amount_due: number | null;
