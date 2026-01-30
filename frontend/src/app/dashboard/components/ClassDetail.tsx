@@ -1,19 +1,23 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { ArrowLeft, Users, Download, Search } from 'lucide-react';
+import { ArrowLeft, Users, Download, Search, UserPlus } from 'lucide-react';
 import { getClass, getClassExportUrl, unenrollStudent } from '@/lib/api';
-import { ClassWithEnrollments, StudentWithFamily, ClassItem, Enrollment } from '@/types/family';
+import { ClassWithEnrollments, StudentWithFamily, ClassItem, Enrollment, AcademicYear } from '@/types/family';
 
 interface ClassDetailProps {
   classItem: ClassItem;
+  selectedYear: AcademicYear | null;
   onBack: () => void;
+  onAddStudents: () => void;
   showToast: (message: string, type: 'success' | 'error') => void;
 }
 
 export default function ClassDetail({
   classItem,
+  selectedYear,
   onBack,
+  onAddStudents,
   showToast,
 }: ClassDetailProps) {
   const [classData, setClassData] = useState<ClassWithEnrollments | null>(null);
@@ -114,6 +118,13 @@ export default function ClassDetail({
         </div>
         <div className="flex items-center gap-2">
           <button
+            onClick={onAddStudents}
+            className="flex items-center gap-2 px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            <UserPlus className="h-4 w-4" />
+            Add Students
+          </button>
+          <button
             onClick={handleExport}
             className="flex items-center gap-2 px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
           >
@@ -131,7 +142,7 @@ export default function ClassDetail({
           placeholder="Search students..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+          className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-gray-700"
         />
       </div>
 

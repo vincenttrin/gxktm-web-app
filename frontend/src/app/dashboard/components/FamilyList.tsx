@@ -251,7 +251,7 @@ export default function FamilyList({ selectedYear }: FamilyListProps) {
       {/* Search & Filter Bar */}
       <div className="flex items-center gap-4 mb-6">
         <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-700" />
           <input
             type="text"
             value={searchQuery}
@@ -262,7 +262,7 @@ export default function FamilyList({ selectedYear }: FamilyListProps) {
           {searchQuery && (
             <button
               onClick={() => setSearchQuery('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700"
             >
               <X className="h-5 w-5" />
             </button>
@@ -270,7 +270,7 @@ export default function FamilyList({ selectedYear }: FamilyListProps) {
         </div>
         
         <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-500">Sort by:</span>
+          <span className="text-sm text-gray-700">Sort by:</span>
           <SortButton field="family_name" label="Name" />
           <SortButton field="city" label="City" />
           <SortButton field="state" label="State" />

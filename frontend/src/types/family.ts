@@ -162,6 +162,125 @@ export interface ClassUpdate {
   academic_year_id?: number;
 }
 
+// Payment Types
+export type PaymentStatus = 'unpaid' | 'partial' | 'paid' | 'refunded';
+
+export interface Payment {
+  id: string;
+  family_id: string;
+  school_year: string;
+  amount_due: number | null;
+  amount_paid: number;
+  payment_status: PaymentStatus;
+  payment_date: string | null;
+  payment_method: string | null;
+  notes: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+  family_name?: string | null;
+}
+
+export interface PaymentCreate {
+  family_id: string;
+  school_year: string;
+  amount_due?: number | null;
+  amount_paid?: number;
+  payment_date?: string | null;
+  payment_method?: string | null;
+  notes?: string | null;
+}
+
+export interface PaymentUpdate {
+  amount_due?: number | null;
+  amount_paid?: number | null;
+  payment_status?: PaymentStatus | null;
+  payment_date?: string | null;
+  payment_method?: string | null;
+  notes?: string | null;
+}
+
+export interface PaginatedPaymentResponse {
+  items: Payment[];
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+}
+
+export interface PaymentSummary {
+  total_families: number;
+  paid_count: number;
+  partial_count: number;
+  unpaid_count: number;
+  total_amount_due: number;
+  total_amount_paid: number;
+}
+
+export interface PaymentQueryParams {
+  page?: number;
+  page_size?: number;
+  school_year?: string;
+  payment_status?: PaymentStatus;
+  search?: string;
+  sort_by?: string;
+  sort_order?: 'asc' | 'desc';
+}
+
+// Family with Payment Status
+export interface FamilyPaymentStatus {
+  payment_status: PaymentStatus;
+  amount_due: number | null;
+  amount_paid: number;
+  school_year: string;
+}
+
+export interface FamilyWithPayment extends Family {
+  payment_status: FamilyPaymentStatus | null;
+  enrolled_class_count: number;
+}
+
+export interface PaginatedFamilyWithPaymentResponse {
+  items: FamilyWithPayment[];
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+}
+
+// Manual Enrollment Types
+export interface ManualEnrollmentCreate {
+  student_id: string;
+  class_ids: string[];
+}
+
+export interface ManualEnrollmentResponse {
+  student_id: string;
+  enrolled_class_ids: string[];
+  already_enrolled_class_ids: string[];
+  message: string;
+}
+
+export interface BulkEnrollmentCreate {
+  class_id: string;
+  student_ids: string[];
+}
+
+export interface BulkEnrollmentResponse {
+  class_id: string;
+  enrolled_student_ids: string[];
+  already_enrolled_student_ids: string[];
+  message: string;
+}
+
+export interface StudentEnrollmentInfo {
+  id: string;
+  family_id: string;
+  first_name: string;
+  last_name: string;
+  family_name: string | null;
+  enrolled_classes: ClassItem[];
+}
+
 // API Query Parameters
 export interface FamilyQueryParams {
   page?: number;
@@ -171,7 +290,69 @@ export interface FamilyQueryParams {
   sort_order?: 'asc' | 'desc';
 }
 
+export interface FamilyWithPaymentQueryParams extends FamilyQueryParams {
+  payment_status?: PaymentStatus;
+  school_year?: string;
+}
+
 export interface ClassQueryParams {
   academic_year_id?: number;
   program_id?: number;
+}
+
+
+// --- Enrolled Family Payment Types (for payment tracking) ---
+
+export interface EnrolledFamilyGuardian {
+  name: string;
+}
+
+export interface EnrolledClassInfo {
+  id: string;
+  name: string;
+  program_name: string | null;
+}
+
+export interface StudentWithEnrollmentStatus {
+  id: string;
+  first_name: string;
+  last_name: string;
+  is_enrolled: boolean;
+  enrolled_classes: EnrolledClassInfo[];
+}
+
+// Keep for backward compatibility
+export interface EnrolledFamilyStudent {
+  first_name: string;
+  last_name: string;
+}
+
+export interface EnrolledFamilyPayment {
+  id: string;
+  family_name: string | null;
+  guardians: EnrolledFamilyGuardian[];
+  students: StudentWithEnrollmentStatus[];
+  enrolled_count: number;
+  payment_status: PaymentStatus;
+  amount_due: number | null;
+  amount_paid: number;
+  payment_date: string | null;
+  payment_method: string | null;
+}
+
+export interface EnrolledFamiliesResponse {
+  items: EnrolledFamilyPayment[];
+  total: number;
+  academic_year_id: number;
+  academic_year_name: string;
+}
+
+export interface EnrolledFamiliesSummary {
+  total_enrolled_families: number;
+  paid_count: number;
+  partial_count: number;
+  unpaid_count: number;
+  total_amount_due: number;
+  total_amount_paid: number;
+  academic_year_name: string;
 }

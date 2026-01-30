@@ -8,6 +8,7 @@ import { normalizeVietnamese } from '@/utils/vietnamese';
 import ClassModal from './ClassModal';
 import ClassDetail from './ClassDetail';
 import DeleteClassDialog from './DeleteClassDialog';
+import ManualEnrollmentModal from './ManualEnrollmentModal';
 import Toast from './Toast';
 
 interface ClassListProps {
@@ -44,6 +45,7 @@ export default function ClassList({ selectedYear }: ClassListProps) {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingClass, setEditingClass] = useState<ClassItem | null>(null);
   const [deletingClass, setDeletingClass] = useState<ClassItem | null>(null);
+  const [enrollmentClass, setEnrollmentClass] = useState<ClassItem | null>(null);
   
   // Toast
   const [toast, setToast] = useState<{
@@ -219,9 +221,29 @@ export default function ClassList({ selectedYear }: ClassListProps) {
       <div className="p-6">
         <ClassDetail
           classItem={selectedClass}
+          selectedYear={selectedYear}
           onBack={() => setSelectedClass(null)}
+          onAddStudents={() => setEnrollmentClass(selectedClass)}
           showToast={showToast}
         />
+        
+        {/* Enrollment Modal */}
+        {enrollmentClass && (
+          <ManualEnrollmentModal
+            mode="class"
+            classId={enrollmentClass.id}
+            className={enrollmentClass.name}
+            selectedYear={selectedYear}
+            onClose={() => setEnrollmentClass(null)}
+            onSuccess={() => {
+              setEnrollmentClass(null);
+              // Refresh class detail
+              setSelectedClass({ ...selectedClass });
+            }}
+            showToast={showToast}
+          />
+        )}
+        
         {/* Toast Notification */}
         {toast && (
           <Toast

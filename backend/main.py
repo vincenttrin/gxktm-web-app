@@ -9,7 +9,8 @@ from database import get_db
 from models import Program, Student, Enrollment, Family
 from routers.families import router as families_router, academic_year_router
 from routers.classes import router as classes_router, program_router
-from routers.enrollment import router as enrollment_router
+from routers.payments import router as payments_router
+from routers.admin_enrollments import router as enrollments_router
 
 
 app = FastAPI(title="Sunday School Admin API", version="1.0.0")
@@ -32,7 +33,8 @@ app.include_router(families_router)
 app.include_router(academic_year_router)
 app.include_router(classes_router)
 app.include_router(program_router)
-app.include_router(enrollment_router)
+app.include_router(payments_router)
+app.include_router(enrollments_router)
 
 
 @app.get("/")
