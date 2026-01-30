@@ -105,7 +105,7 @@ export default function ClassModal({
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="e.g., Grade 5 - Room A"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-gray-700"
                   required
                 />
               </div>

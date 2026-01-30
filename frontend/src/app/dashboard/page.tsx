@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Users, GraduationCap, DollarSign } from 'lucide-react';
 import DashboardHeader from './components/DashboardHeader';
-import FamilyListWithPayments from './components/FamilyListWithPayments';
+import FamilyList from './components/FamilyList';
 import ClassList from './components/ClassList';
 import PaymentList from './components/PaymentList';
 import { AcademicYear } from '@/types/family';
@@ -54,9 +54,13 @@ export default function DashboardPage() {
       </div>
 
       <main>
-        {activeTab === 'families' && <FamilyListWithPayments selectedYear={selectedYear} />}
+        {activeTab === 'families' && <FamilyList selectedYear={selectedYear} />}
         {activeTab === 'classes' && <ClassList selectedYear={selectedYear} />}
-        {activeTab === 'payments' && <PaymentList selectedYear={selectedYear} />}
+        {activeTab === 'payments' && (
+          <div className="p-6">
+            <PaymentList selectedYear={selectedYear} />
+          </div>
+        )}
       </main>
     </div>
   );

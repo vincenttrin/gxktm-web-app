@@ -564,7 +564,7 @@ export default function FamilyModal({
                             updateEmergencyContact(index, 'name', e.target.value)
                           }
                           placeholder="Full name *"
-                          className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                          className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-gray-700"
                           required
                         />
                         <input
@@ -578,7 +578,7 @@ export default function FamilyModal({
                             )
                           }
                           placeholder="Relationship"
-                          className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                          className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-gray-700"
                         />
                         <input
                           type="tel"
@@ -587,7 +587,7 @@ export default function FamilyModal({
                             updateEmergencyContact(index, 'phone', e.target.value)
                           }
                           placeholder="Phone *"
-                          className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                          className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-gray-700"
                           required
                         />
                         <input
@@ -597,7 +597,7 @@ export default function FamilyModal({
                             updateEmergencyContact(index, 'email', e.target.value)
                           }
                           placeholder="Email"
-                          className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                          className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-gray-700"
                         />
                       </div>
                     </div>
