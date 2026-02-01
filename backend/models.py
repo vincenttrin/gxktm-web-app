@@ -14,12 +14,28 @@ class PaymentStatus(str, enum.Enum):
     PAID = "paid"
     REFUNDED = "refunded"
 
-# 1. Academic Year
+
+class SchoolYearStatus(str, enum.Enum):
+    UPCOMING = "upcoming"  # Future year, enrollment may be open
+    ACTIVE = "active"      # Current year with classes running
+    ARCHIVED = "archived"  # Past year, read-only
+
+
+# 1. Academic Year (Enhanced for School Year Management)
 class AcademicYear(Base):
     __tablename__ = "academic_years"
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String) 
-    is_current = Column(Boolean, default=False)
+    name = Column(String)  # e.g., "2025-2026"
+    start_year = Column(Integer, nullable=True)  # e.g., 2025
+    end_year = Column(Integer, nullable=True)  # e.g., 2026
+    is_current = Column(Boolean, default=False)  # Legacy field, kept for compatibility
+    is_active = Column(Boolean, default=False)  # Whether classes are currently running
+    enrollment_open = Column(Boolean, default=True)  # Whether accepting new enrollments
+    transition_date = Column(Date, nullable=True)  # When this year becomes active (e.g., July 1)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    # Relationship to classes
+    classes = relationship("Class", back_populates="academic_year")
 
 # 2. Family - Main unit for authentication and information management
 class Family(Base):
@@ -82,6 +98,7 @@ class Class(Base):
     academic_year_id = Column(Integer, ForeignKey("academic_years.id"))
     
     program = relationship("Program", back_populates="classes")
+    academic_year = relationship("AcademicYear", back_populates="classes")
     enrollments = relationship("Enrollment", back_populates="assigned_class")
 
 # 5. Student

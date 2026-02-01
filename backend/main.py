@@ -11,6 +11,8 @@ from routers.families import router as families_router, academic_year_router
 from routers.classes import router as classes_router, program_router
 from routers.payments import router as payments_router
 from routers.admin_enrollments import router as enrollments_router
+from routers.enrollment_portal import router as enrollment_portal_router
+from routers.school_years import router as school_years_router
 
 
 app = FastAPI(title="Sunday School Admin API", version="1.0.0")
@@ -35,6 +37,8 @@ app.include_router(classes_router)
 app.include_router(program_router)
 app.include_router(payments_router)
 app.include_router(enrollments_router)
+app.include_router(enrollment_portal_router)
+app.include_router(school_years_router)
 
 
 @app.get("/")
@@ -44,25 +48,3 @@ def read_root():
 @app.get("/health")
 def health_check():
     return {"status": "ok"}
-
-# @app.post("/students")
-# async def create_student(student: StudentCreate, db: AsyncSession = Depends(get_db)):
-#     new_student = Student(
-#         first_name=student.first_name,
-#         last_name=student.last_name,
-#         middle_name=student.middle_name,
-#         date_of_birth=student.date_of_birth,
-#         allergies=student.allergies,
-#         gender=student.gender
-#     )
-#     db.add(new_student)
-#     await db.flush()  # Ensure new_student.id is populated
-#     print(f"Creating student with ID: {new_student.id}")
-#     for c_id in student.class_ids:
-#         enrollment = Enrollment(
-#             student_id=new_student.id,
-#             class_id=c_id
-#         )
-#         db.add(enrollment)
-#     await db.commit()
-#     return {"status": "success", "student_id": new_student.id}

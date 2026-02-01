@@ -140,12 +140,17 @@ async def get_current_academic_year(
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Get the current (or upcoming) academic year for enrollment.
+    Get the current/newest school year for enrollment.
+    
+    This endpoint returns the newest school year (highest start_year).
+    Parents always enroll into the newest year where enrollment is open.
     """
+    from sqlalchemy import desc
+    
+    # Get the newest school year (by start_year descending)
     result = await db.execute(
         select(AcademicYear)
-        .where(AcademicYear.is_current == True)
-        .order_by(AcademicYear.id.desc())  # Get the latest one if multiple exist
+        .order_by(desc(AcademicYear.start_year), desc(AcademicYear.id))
         .limit(1)
     )
     academic_year = result.scalar_one_or_none()
@@ -153,13 +158,65 @@ async def get_current_academic_year(
     if not academic_year:
         raise HTTPException(
             status_code=404, 
-            detail="No current academic year configured. Please contact administration."
+            detail="No school year configured. Please contact administration."
+        )
+    
+    # Check if enrollment is open
+    if hasattr(academic_year, 'enrollment_open') and academic_year.enrollment_open is False:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Enrollment for {academic_year.name} is currently closed. Please contact administration."
         )
     
     return {
         "id": academic_year.id,
         "name": academic_year.name,
         "is_current": academic_year.is_current,
+        "enrollment_open": getattr(academic_year, 'enrollment_open', True),
+        "start_year": getattr(academic_year, 'start_year', None),
+        "end_year": getattr(academic_year, 'end_year', None),
+    }
+
+
+@router.get("/school-year/current")
+async def get_current_school_year_for_enrollment(
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Get the current/newest school year for enrollment.
+    
+    Returns the newest school year that parents should enroll into.
+    """
+    from sqlalchemy import desc
+    
+    # Get the newest school year
+    result = await db.execute(
+        select(AcademicYear)
+        .order_by(desc(AcademicYear.start_year), desc(AcademicYear.id))
+        .limit(1)
+    )
+    school_year = result.scalar_one_or_none()
+    
+    if not school_year:
+        raise HTTPException(
+            status_code=404, 
+            detail="No school year configured. Please contact administration."
+        )
+    
+    if hasattr(school_year, 'enrollment_open') and school_year.enrollment_open is False:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Enrollment for {school_year.name} is currently closed. Please contact administration."
+        )
+    
+    return {
+        "id": school_year.id,
+        "year_label": school_year.name,
+        "name": school_year.name,
+        "is_current": school_year.is_current,
+        "enrollment_open": getattr(school_year, 'enrollment_open', True),
+        "start_year": getattr(school_year, 'start_year', None),
+        "end_year": getattr(school_year, 'end_year', None),
     }
 
 
@@ -170,24 +227,32 @@ async def get_classes_for_enrollment(
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Get all available classes for the current academic year.
+    Get all available classes for the current/newest school year.
     Classes are grouped by program (Giao Ly, Viet Ngu).
+    
+    If no academic_year_id is provided, uses the newest school year.
     """
-    # If no academic year specified, get the current one
-    if academic_year_id is None:
+    from sqlalchemy import desc
+    
+    target_academic_year_id = academic_year_id
+    
+    if not target_academic_year_id:
+        # Get the newest school year
         year_result = await db.execute(
-            select(AcademicYear).where(AcademicYear.is_current == True)
+            select(AcademicYear)
+            .order_by(desc(AcademicYear.start_year), desc(AcademicYear.id))
+            .limit(1)
         )
         current_year = year_result.scalar_one_or_none()
         if current_year:
-            academic_year_id = current_year.id
+            target_academic_year_id = current_year.id
     
     # Build query
     query = select(Class).options(selectinload(Class.program))
     
     conditions = []
-    if academic_year_id:
-        conditions.append(Class.academic_year_id == academic_year_id)
+    if target_academic_year_id:
+        conditions.append(Class.academic_year_id == target_academic_year_id)
     if program_id:
         conditions.append(Class.program_id == program_id)
     
@@ -241,14 +306,18 @@ async def get_suggested_enrollments(
     - Move each child up one class level from last year
     - Exception: Students in level 9 classes (Giao Ly 9, Viet Ngu 9) are NOT pre-populated
     """
-    # Get current academic year
+    from sqlalchemy import desc
+    
+    # Get the newest academic year
     year_result = await db.execute(
-        select(AcademicYear).where(AcademicYear.is_current == True)
+        select(AcademicYear)
+        .order_by(desc(AcademicYear.start_year), desc(AcademicYear.id))
+        .limit(1)
     )
     current_year = year_result.scalar_one_or_none()
     
     if not current_year:
-        raise HTTPException(status_code=404, detail="No current academic year configured")
+        raise HTTPException(status_code=404, detail="No school year configured")
     
     # Get all classes for current year (for matching)
     classes_result = await db.execute(

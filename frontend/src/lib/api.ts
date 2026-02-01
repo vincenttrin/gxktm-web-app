@@ -32,6 +32,14 @@ import {
   BulkEnrollmentCreate,
   BulkEnrollmentResponse,
   StudentEnrollmentInfo,
+  SchoolYear,
+  SchoolYearWithStats,
+  SchoolYearCreate,
+  SchoolYearUpdate,
+  SchoolYearTransitionRequest,
+  SchoolYearTransitionResponse,
+  SchoolYearAutoCreateCheck,
+  SchoolYearTransitionCheck,
 } from '@/types/family';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
@@ -249,7 +257,7 @@ export async function deleteEmergencyContact(
   return handleResponse<void>(response);
 }
 
-// --- Academic Year API ---
+// --- Academic Year API (Legacy - for backward compatibility) ---
 
 export async function getAcademicYears(): Promise<AcademicYear[]> {
   const response = await fetch(`${API_BASE_URL}/api/academic-years`, {
@@ -267,6 +275,121 @@ export async function getCurrentAcademicYear(): Promise<AcademicYear> {
   return handleResponse<AcademicYear>(response);
 }
 
+// --- School Year API (New comprehensive model) ---
+
+export async function getSchoolYears(includeArchived: boolean = false): Promise<SchoolYearWithStats[]> {
+  const params = new URLSearchParams();
+  if (includeArchived) params.set('include_archived', 'true');
+  
+  const response = await fetch(`${API_BASE_URL}/api/school-years?${params.toString()}`, {
+    cache: 'no-store',
+  });
+  
+  return handleResponse<SchoolYearWithStats[]>(response);
+}
+
+export async function getNewestSchoolYear(): Promise<SchoolYear> {
+  const response = await fetch(`${API_BASE_URL}/api/school-years/newest`, {
+    cache: 'no-store',
+  });
+  
+  return handleResponse<SchoolYear>(response);
+}
+
+export async function getActiveSchoolYear(): Promise<SchoolYear> {
+  const response = await fetch(`${API_BASE_URL}/api/school-years/active`, {
+    cache: 'no-store',
+  });
+  
+  return handleResponse<SchoolYear>(response);
+}
+
+export async function getSchoolYear(schoolYearId: number): Promise<SchoolYearWithStats> {
+  const response = await fetch(`${API_BASE_URL}/api/school-years/${schoolYearId}`, {
+    cache: 'no-store',
+  });
+  
+  return handleResponse<SchoolYearWithStats>(response);
+}
+
+export async function createSchoolYear(data: SchoolYearCreate): Promise<SchoolYear> {
+  const response = await fetch(`${API_BASE_URL}/api/school-years`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  
+  return handleResponse<SchoolYear>(response);
+}
+
+export async function updateSchoolYear(
+  schoolYearId: number,
+  data: SchoolYearUpdate
+): Promise<SchoolYear> {
+  const response = await fetch(`${API_BASE_URL}/api/school-years/${schoolYearId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  
+  return handleResponse<SchoolYear>(response);
+}
+
+export async function transitionSchoolYear(
+  newActiveYearId: number
+): Promise<SchoolYearTransitionResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/school-years/transition`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ new_active_year_id: newActiveYearId }),
+  });
+  
+  return handleResponse<SchoolYearTransitionResponse>(response);
+}
+
+export async function deleteSchoolYear(schoolYearId: number): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/api/school-years/${schoolYearId}`, {
+    method: 'DELETE',
+  });
+  
+  return handleResponse<void>(response);
+}
+
+export async function checkAutoCreateSchoolYear(): Promise<SchoolYearAutoCreateCheck> {
+  const response = await fetch(`${API_BASE_URL}/api/school-years/check-auto-create`, {
+    method: 'POST',
+  });
+  
+  return handleResponse<SchoolYearAutoCreateCheck>(response);
+}
+
+export async function checkTransitionNeeded(): Promise<SchoolYearTransitionCheck> {
+  const response = await fetch(`${API_BASE_URL}/api/school-years/check-transition`, {
+    method: 'POST',
+  });
+  
+  return handleResponse<SchoolYearTransitionCheck>(response);
+}
+
+export async function copyClassesFromPreviousYear(
+  schoolYearId: number,
+  sourceYearId?: number
+): Promise<{ success: boolean; message: string; copied_count: number }> {
+  const params = new URLSearchParams();
+  if (sourceYearId) {
+    params.set('source_year_id', sourceYearId.toString());
+  }
+  
+  const response = await fetch(
+    `${API_BASE_URL}/api/school-years/${schoolYearId}/copy-classes?${params.toString()}`,
+    {
+      method: 'POST',
+    }
+  );
+  
+  return handleResponse<{ success: boolean; message: string; copied_count: number }>(response);
+}
+
 // --- Program API ---
 
 export async function getPrograms(): Promise<Program[]> {
@@ -282,7 +405,10 @@ export async function getPrograms(): Promise<Program[]> {
 export async function getClasses(params: ClassQueryParams = {}): Promise<ClassItem[]> {
   const searchParams = new URLSearchParams();
   
-  if (params.academic_year_id) {
+  // Prefer school_year_id over legacy academic_year_id
+  if (params.school_year_id) {
+    searchParams.set('school_year_id', params.school_year_id.toString());
+  } else if (params.academic_year_id) {
     searchParams.set('academic_year_id', params.academic_year_id.toString());
   }
   if (params.program_id) {

@@ -6,14 +6,26 @@ import {
   LogOut,
   Users,
   ChevronDown,
+  Calendar,
+  CheckCircle,
+  Clock,
 } from 'lucide-react';
 import { createClient } from '@/utils/supabase/client';
-import { getAcademicYears } from '@/lib/api';
-import { AcademicYear } from '@/types/family';
+import { getSchoolYears, getAcademicYears } from '@/lib/api';
+
+// Unified year type that works with both SchoolYear and AcademicYear
+export interface DisplayYear {
+  id: number;
+  name: string;
+  is_current: boolean;
+  is_active?: boolean;
+  status?: string;
+  school_year_id?: number;  // If from SchoolYear model
+}
 
 interface DashboardHeaderProps {
-  selectedYear: AcademicYear | null;
-  onYearChange: (year: AcademicYear) => void;
+  selectedYear: DisplayYear | null;
+  onYearChange: (year: DisplayYear) => void;
 }
 
 export default function DashboardHeader({
@@ -21,7 +33,7 @@ export default function DashboardHeader({
   onYearChange,
 }: DashboardHeaderProps) {
   const router = useRouter();
-  const [academicYears, setAcademicYears] = useState<AcademicYear[]>([]);
+  const [displayYears, setDisplayYears] = useState<DisplayYear[]>([]);
   const [isYearDropdownOpen, setIsYearDropdownOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
@@ -33,30 +45,64 @@ export default function DashboardHeader({
       setUserEmail(user?.email || null);
     };
 
-    const loadAcademicYears = async () => {
+    const loadYears = async () => {
       try {
-        const years = await getAcademicYears();
-        setAcademicYears(years);
+        // Try to load from new SchoolYear model first
+        const schoolYears = await getSchoolYears();
         
-        // If no year is selected, select the current year or the first available
-        if (years.length > 0) {
-          const currentYear = years.find((y) => y.is_current) || years[0];
+        if (schoolYears && schoolYears.length > 0) {
+          // Convert SchoolYear to DisplayYear
+          const years: DisplayYear[] = schoolYears.map(sy => ({
+            id: sy.id,
+            name: sy.name,
+            is_current: sy.is_current,
+            is_active: sy.is_active,
+            status: sy.status,
+            school_year_id: sy.id,
+          }));
+          setDisplayYears(years);
+          
+          // Default to the newest year (first in list, sorted by start_year desc)
+          // The newest year is what both admin and parents should see by default
+          const newestYear = years[0];
+          onYearChange(newestYear);
+          return;
+        }
+      } catch {
+        console.log('SchoolYear API not available, falling back to AcademicYear');
+      }
+      
+      // Fall back to legacy AcademicYear
+      try {
+        const academicYears = await getAcademicYears();
+        
+        if (academicYears && academicYears.length > 0) {
+          const years: DisplayYear[] = academicYears.map(ay => ({
+            id: ay.id,
+            name: ay.name,
+            is_current: ay.is_current,
+          }));
+          setDisplayYears(years);
+          
+          const currentYear = years.find(y => y.is_current) || years[0];
           onYearChange(currentYear);
+          return;
         }
       } catch (error) {
-        console.error('Failed to load academic years:', error);
-        // Create default year if none exist
-        const defaultYear: AcademicYear = {
-          id: 0,
-          name: '2025-2026',
-          is_current: true,
-        };
-        setAcademicYears([defaultYear]);
-        onYearChange(defaultYear);
+        console.error('Failed to load years:', error);
       }
+      
+      // Create default year if nothing exists
+      const defaultYear: DisplayYear = {
+        id: 0,
+        name: '2025-2026',
+        is_current: true,
+      };
+      setDisplayYears([defaultYear]);
+      onYearChange(defaultYear);
     };
 
-    loadAcademicYears();
+    loadYears();
     loadUser();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -66,6 +112,33 @@ export default function DashboardHeader({
     const supabase = createClient();
     await supabase.auth.signOut();
     router.push('/login');
+  };
+
+  const getYearBadge = (year: DisplayYear) => {
+    if (year.status === 'active' || year.is_active) {
+      return (
+        <span className="inline-flex items-center gap-1 text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">
+          <CheckCircle className="h-3 w-3" />
+          Active
+        </span>
+      );
+    }
+    if (year.status === 'upcoming') {
+      return (
+        <span className="inline-flex items-center gap-1 text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">
+          <Clock className="h-3 w-3" />
+          Upcoming
+        </span>
+      );
+    }
+    if (year.is_current) {
+      return (
+        <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">
+          Current
+        </span>
+      );
+    }
+    return null;
   };
 
   return (
@@ -82,45 +155,50 @@ export default function DashboardHeader({
             </div>
           </div>
 
-          {/* Center Section - Academic Year Selector */}
-          <div className="relative">
-            <button
-              onClick={() => setIsYearDropdownOpen(!isYearDropdownOpen)}
-              className="flex items-center gap-2 px-4 py-2 bg-gray-50 hover:bg-gray-100 rounded-lg border border-gray-200 transition-colors"
-            >
-              <span className="text-sm font-medium text-gray-700">
-                {selectedYear?.name || 'Select Year'}
-              </span>
-              <ChevronDown
-                className={`h-4 w-4 text-gray-500 transition-transform ${
-                  isYearDropdownOpen ? 'rotate-180' : ''
-                }`}
-              />
-            </button>
+          {/* Center Section - School Year Selector */}
+          <div className="flex items-center gap-2">
+            <div className="relative">
+              <button
+                onClick={() => setIsYearDropdownOpen(!isYearDropdownOpen)}
+                className="flex items-center gap-2 px-4 py-2 bg-gray-50 hover:bg-gray-100 rounded-lg border border-gray-200 transition-colors"
+              >
+                <Calendar className="h-4 w-4 text-gray-500" />
+                <span className="text-sm font-medium text-gray-700">
+                  {selectedYear?.name || 'Select Year'}
+                </span>
+                {selectedYear && getYearBadge(selectedYear)}
+                <ChevronDown
+                  className={`h-4 w-4 text-gray-500 transition-transform ${
+                    isYearDropdownOpen ? 'rotate-180' : ''
+                  }`}
+                />
+              </button>
 
-            {isYearDropdownOpen && (
-              <div className="absolute top-full mt-1 right-0 w-48 bg-white border border-gray-200 rounded-lg shadow-lg py-1 z-50">
-                {academicYears.map((year) => (
-                  <button
-                    key={year.id}
-                    onClick={() => {
-                      onYearChange(year);
-                      setIsYearDropdownOpen(false);
-                    }}
-                    className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 transition-colors ${
-                      selectedYear?.id === year.id
-                        ? 'bg-blue-50 text-blue-700 font-medium'
-                        : 'text-gray-700'
-                    }`}
-                  >
-                    {year.name}
-                    {year.is_current && (
-                      <span className="ml-2 text-xs text-blue-600">(Current)</span>
-                    )}
-                  </button>
-                ))}
-              </div>
-            )}
+              {isYearDropdownOpen && (
+                <div className="absolute top-full mt-1 right-0 w-64 bg-white border border-gray-200 rounded-lg shadow-lg py-1 z-50">
+                  <div className="px-3 py-2 border-b border-gray-100">
+                    <p className="text-xs font-medium text-gray-500 uppercase">School Years</p>
+                  </div>
+                  {displayYears.map((year) => (
+                    <button
+                      key={year.id}
+                      onClick={() => {
+                        onYearChange(year);
+                        setIsYearDropdownOpen(false);
+                      }}
+                      className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 transition-colors flex items-center justify-between ${
+                        selectedYear?.id === year.id
+                          ? 'bg-blue-50 text-blue-700 font-medium'
+                          : 'text-gray-700'
+                      }`}
+                    >
+                      <span>{year.name}</span>
+                      {getYearBadge(year)}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Right Section - User & Sign Out */}

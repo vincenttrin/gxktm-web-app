@@ -13,6 +13,9 @@ export interface AcademicYear {
   id: number;
   name: string;
   is_current: boolean;
+  enrollment_open?: boolean;
+  start_year?: number | null;
+  end_year?: number | null;
 }
 
 // Program (Giao Ly, Viet Ngu)

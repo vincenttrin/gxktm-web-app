@@ -100,11 +100,91 @@ export interface FamilyUpdate {
   diocese_id?: string | null;
 }
 
-// Academic Year Types
+// School Year Status
+export type SchoolYearStatus = 'upcoming' | 'active' | 'archived';
+
+// School Year Types (Enhanced for comprehensive management)
+export interface SchoolYear {
+  id: number;
+  name: string;  // e.g., "2025-2026"
+  start_year: number | null;  // e.g., 2025
+  end_year: number | null;    // e.g., 2026
+  is_current: boolean; // Legacy field for backward compatibility
+  is_active: boolean;  // Whether classes are currently running
+  enrollment_open: boolean; // Whether enrollment is accepting registrations
+  transition_date: string | null; // When this year becomes active (e.g., "2026-07-01")
+  created_at?: string;
+  status?: SchoolYearStatus; // Computed: upcoming, active, or archived
+  enrolled_students_count?: number; // Number of enrollments in this school year
+}
+
+export interface SchoolYearWithStats extends SchoolYear {
+  class_count: number;  // Number of classes in this school year
+  enrolled_students_count: number; // Number of enrollments in this school year
+}
+
+export interface SchoolYearCreate {
+  name: string;
+  start_year?: number;
+  end_year?: number;
+  is_current?: boolean;
+  is_active?: boolean;
+  enrollment_open?: boolean;
+  transition_date?: string;
+}
+
+export interface SchoolYearUpdate {
+  name?: string;
+  is_active?: boolean;
+  enrollment_open?: boolean;
+  transition_date?: string;
+}
+
+export interface SchoolYearTransitionRequest {
+  new_active_year_id: number;
+}
+
+export interface SchoolYearTransitionResponse {
+  success: boolean;
+  message: string;
+  previous_active_year_id: number | null;
+  new_active_year_id: number;
+}
+
+export interface SchoolYearAutoCreateCheck {
+  should_create: boolean;
+  reason: string;
+  suggested_name?: string;
+  suggested_start_year?: number;
+  suggested_end_year?: number;
+  suggested_transition_date?: string;
+  existing_year_id?: number;
+  current_month?: number;
+}
+
+export interface SchoolYearTransitionCheck {
+  should_transition: boolean;
+  reason: string;
+  year_id?: number;
+  year_name?: string;
+  transition_date?: string;
+  upcoming_year_id?: number;
+  upcoming_year_name?: string;
+  days_until_transition?: number;
+}
+
+// Academic Year Types (Legacy - for backward compatibility, use SchoolYear instead)
 export interface AcademicYear {
   id: number;
   name: string;
   is_current: boolean;
+  start_year?: number | null;
+  end_year?: number | null;
+  is_active?: boolean;
+  enrollment_open?: boolean;
+  transition_date?: string | null;
+  status?: SchoolYearStatus;
+  enrolled_students_count?: number;
 }
 
 // Program Types
@@ -118,7 +198,8 @@ export interface ClassItem {
   id: string;
   name: string;
   program_id: number;
-  academic_year_id: number;
+  academic_year_id?: number;  // Legacy, optional
+  school_year_id?: number;    // New school year reference
   program: Program | null;
   enrollment_count?: number;
 }
@@ -153,13 +234,15 @@ export interface ClassWithEnrollments extends ClassItem {
 export interface ClassCreate {
   name: string;
   program_id: number;
-  academic_year_id: number;
+  academic_year_id?: number;  // Legacy, optional
+  school_year_id?: number;    // Preferred: use this for new classes
 }
 
 export interface ClassUpdate {
   name?: string;
   program_id?: number;
-  academic_year_id?: number;
+  academic_year_id?: number;  // Legacy
+  school_year_id?: number;    // Preferred
 }
 
 // Payment Types
@@ -169,6 +252,7 @@ export interface Payment {
   id: string;
   family_id: string;
   school_year: string;
+  school_year_id?: number;  // New school year reference
   amount_due: number | null;
   amount_paid: number;
   payment_status: PaymentStatus;
@@ -293,10 +377,12 @@ export interface FamilyQueryParams {
 export interface FamilyWithPaymentQueryParams extends FamilyQueryParams {
   payment_status?: PaymentStatus;
   school_year?: string;
+  school_year_id?: number;
 }
 
 export interface ClassQueryParams {
-  academic_year_id?: number;
+  academic_year_id?: number;  // Legacy
+  school_year_id?: number;    // Preferred
   program_id?: number;
 }
 

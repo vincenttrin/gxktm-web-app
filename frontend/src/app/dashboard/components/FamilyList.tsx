@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Plus, Search, ChevronUp, ChevronDown, X, RefreshCw } from 'lucide-react';
 import { getAllFamilies } from '@/lib/api';
-import { Family, AcademicYear } from '@/types/family';
+import { Family } from '@/types/family';
 import { normalizeVietnamese, getFamilySearchableText } from '@/utils/vietnamese';
 import FamilyCard from './FamilyCard';
 import FamilyModal from './FamilyModal';
@@ -11,9 +11,10 @@ import FamilyDetailModal from './FamilyDetailModal';
 import DeleteConfirmDialog from './DeleteConfirmDialog';
 import Toast from './Toast';
 import Pagination from './Pagination';
+import { DisplayYear } from './DashboardHeader';
 
 interface FamilyListProps {
-  selectedYear: AcademicYear | null;
+  selectedYear: DisplayYear | null;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars

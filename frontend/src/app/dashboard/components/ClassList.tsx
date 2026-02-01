@@ -3,16 +3,17 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Plus, Search, Book, Users, Download, Edit2, Trash2, X, RefreshCw } from 'lucide-react';
 import { getClasses, getPrograms, getClassExportUrl } from '@/lib/api';
-import { ClassItem, Program, AcademicYear } from '@/types/family';
+import { ClassItem, Program } from '@/types/family';
 import { normalizeVietnamese } from '@/utils/vietnamese';
 import ClassModal from './ClassModal';
 import ClassDetail from './ClassDetail';
 import DeleteClassDialog from './DeleteClassDialog';
 import ManualEnrollmentModal from './ManualEnrollmentModal';
 import Toast from './Toast';
+import { DisplayYear } from './DashboardHeader';
 
 interface ClassListProps {
-  selectedYear: AcademicYear | null;
+  selectedYear: DisplayYear | null;
 }
 
 // Year-specific cache for classes

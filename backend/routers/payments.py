@@ -47,7 +47,8 @@ router = APIRouter(prefix="/api/payments", tags=["payments"])
 async def get_payments(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
-    school_year: Optional[str] = Query(None),
+    school_year: Optional[str] = Query(None, description="Legacy: Filter by school year string"),
+    school_year_id: Optional[int] = Query(None, description="Filter by school year ID"),
     payment_status: Optional[PaymentStatusEnum] = Query(None),
     search: Optional[str] = Query(None),
     sort_by: Optional[str] = Query("created_at"),
@@ -59,8 +60,10 @@ async def get_payments(
     # Base query with family info
     query = select(Payment).options(selectinload(Payment.family))
     
-    # Apply filters
-    if school_year:
+    # Apply filters - prefer school_year_id over legacy school_year string
+    if school_year_id:
+        query = query.where(Payment.school_year_id == school_year_id)
+    elif school_year:
         query = query.where(Payment.school_year == school_year)
     
     if payment_status:
@@ -81,7 +84,9 @@ async def get_payments(
     
     # Get total count
     count_query = select(func.count()).select_from(Payment)
-    if school_year:
+    if school_year_id:
+        count_query = count_query.where(Payment.school_year_id == school_year_id)
+    elif school_year:
         count_query = count_query.where(Payment.school_year == school_year)
     if payment_status:
         count_query = count_query.where(Payment.payment_status == payment_status.value)
@@ -169,25 +174,45 @@ async def get_payment_summary(
 
 @router.get("/enrolled-families", response_model=EnrolledFamiliesResponse)
 async def get_enrolled_families(
+    academic_year_id: Optional[int] = Query(None, description="Filter by academic year ID"),
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Get all families that have students enrolled in classes for the current academic year.
+    Get all families that have students enrolled in classes for the current/newest school year.
     This endpoint is specifically for payment tracking - only shows families who need to pay.
     Returns family info, guardian names, student names, enrollment count, and payment status.
     """
-    # Get current academic year
-    year_result = await db.execute(
-        select(AcademicYear).where(AcademicYear.is_current == True)
-    )
-    current_year = year_result.scalar_one_or_none()
+    from sqlalchemy import desc
+    
+    # Determine which school year to use
+    current_year = None
+    current_year_id = academic_year_id
+    
+    if academic_year_id:
+        # Use provided academic year ID
+        year_result = await db.execute(
+            select(AcademicYear).where(AcademicYear.id == academic_year_id)
+        )
+        current_year = year_result.scalar_one_or_none()
+    else:
+        # Get the newest school year
+        year_result = await db.execute(
+            select(AcademicYear)
+            .order_by(desc(AcademicYear.start_year), desc(AcademicYear.id))
+            .limit(1)
+        )
+        current_year = year_result.scalar_one_or_none()
+        if current_year:
+            current_year_id = current_year.id
     
     if not current_year:
-        raise HTTPException(status_code=404, detail="No current academic year configured")
+        raise HTTPException(status_code=404, detail="No school year configured")
+    
+    current_year_name = current_year.name
     
     # Get all classes for current year
     classes_result = await db.execute(
-        select(Class.id).where(Class.academic_year_id == current_year.id)
+        select(Class.id).where(Class.academic_year_id == current_year_id)
     )
     current_year_class_ids = [row[0] for row in classes_result.fetchall()]
     
@@ -195,8 +220,8 @@ async def get_enrolled_families(
         return EnrolledFamiliesResponse(
             items=[],
             total=0,
-            academic_year_id=current_year.id,
-            academic_year_name=current_year.name,
+            academic_year_id=current_year_id,
+            academic_year_name=current_year_name,
         )
     
     # Get families with enrollments in current year classes
@@ -233,7 +258,7 @@ async def get_enrolled_families(
     
     # Build response with payment info
     enrolled_family_items = []
-    school_year = current_year.name
+    school_year = current_year_name
     
     for family in families:
         # Build enriched student data with enrollment status
@@ -300,17 +325,21 @@ async def get_enrolled_families_summary(
     db: AsyncSession = Depends(get_db),
 ):
     """Get summary statistics for enrolled families payment tracking."""
-    # Get current academic year
+    from sqlalchemy import desc
+    
+    # Get the newest academic year
     year_result = await db.execute(
-        select(AcademicYear).where(AcademicYear.is_current == True)
+        select(AcademicYear)
+        .order_by(desc(AcademicYear.start_year), desc(AcademicYear.id))
+        .limit(1)
     )
     current_year = year_result.scalar_one_or_none()
     
     if not current_year:
-        raise HTTPException(status_code=404, detail="No current academic year configured")
+        raise HTTPException(status_code=404, detail="No school year configured")
     
     # Get enrolled families data
-    enrolled_data = await get_enrolled_families(db)
+    enrolled_data = await get_enrolled_families(db=db)
     
     # Calculate summary
     paid_count = sum(1 for f in enrolled_data.items if f.payment_status == "paid")

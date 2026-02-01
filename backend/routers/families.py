@@ -609,21 +609,30 @@ academic_year_router = APIRouter(prefix="/api/academic-years", tags=["academic-y
 
 @academic_year_router.get("", response_model=list[AcademicYearResponse])
 async def get_academic_years(db: AsyncSession = Depends(get_db)):
-    """Get all academic years."""
-    result = await db.execute(select(AcademicYear).order_by(AcademicYear.name.desc()))
+    """Get all academic years, sorted by start_year descending (newest first)."""
+    from sqlalchemy import desc
+    result = await db.execute(
+        select(AcademicYear).order_by(desc(AcademicYear.start_year), desc(AcademicYear.id))
+    )
     return result.scalars().all()
 
 
 @academic_year_router.get("/current", response_model=AcademicYearResponse)
 async def get_current_academic_year(db: AsyncSession = Depends(get_db)):
-    """Get the current academic year."""
+    """
+    Get the current/newest academic year.
+    Returns the year with highest start_year (newest).
+    """
+    from sqlalchemy import desc
     result = await db.execute(
-        select(AcademicYear).where(AcademicYear.is_current == True)
+        select(AcademicYear)
+        .order_by(desc(AcademicYear.start_year), desc(AcademicYear.id))
+        .limit(1)
     )
     year = result.scalar_one_or_none()
     
     if not year:
-        raise HTTPException(status_code=404, detail="No current academic year set")
+        raise HTTPException(status_code=404, detail="No school year configured")
     
     return year
 

@@ -148,21 +148,66 @@ class PaginatedFamilyResponse(BaseModel):
     total_pages: int
 
 
-# --- Academic Year Schemas ---
+# --- School Year Status Enum ---
+class SchoolYearStatusEnum(str, Enum):
+    UPCOMING = "upcoming"
+    ACTIVE = "active"
+    ARCHIVED = "archived"
+
+
+# --- Academic Year Schemas (Enhanced for School Year Management) ---
 class AcademicYearBase(BaseModel):
     name: str
     is_current: bool = False
 
 
 class AcademicYearCreate(AcademicYearBase):
-    pass
+    start_year: Optional[int] = None
+    end_year: Optional[int] = None
+    is_active: bool = False
+    enrollment_open: bool = True
+    transition_date: Optional[date] = None
+
+
+class AcademicYearUpdate(BaseModel):
+    name: Optional[str] = None
+    is_active: Optional[bool] = None
+    enrollment_open: Optional[bool] = None
+    transition_date: Optional[date] = None
 
 
 class AcademicYearResponse(AcademicYearBase):
     id: int
+    start_year: Optional[int] = None
+    end_year: Optional[int] = None
+    is_active: bool = False
+    enrollment_open: bool = True
+    transition_date: Optional[date] = None
+    created_at: Optional[datetime] = None
+    status: Optional[str] = None  # Computed: upcoming, active, or archived
+    enrolled_students_count: Optional[int] = None  # Computed: number of enrolled students
 
     class Config:
         from_attributes = True
+
+
+class SchoolYearWithStats(AcademicYearResponse):
+    """Academic year with additional statistics for admin display."""
+    class_count: int = 0
+    enrolled_students_count: int = 0
+
+
+class SchoolYearTransitionRequest(BaseModel):
+    """Request to trigger school year transition."""
+    new_active_year_id: int
+
+
+class SchoolYearTransitionResponse(BaseModel):
+    """Response after school year transition."""
+    success: bool
+    message: str
+    previous_active_year_id: Optional[int] = None
+    new_active_year_id: int
 
 
 # --- Program Schemas ---
