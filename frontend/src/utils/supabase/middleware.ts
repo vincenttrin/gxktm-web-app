@@ -1,6 +1,12 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
+// Helper to extract user role from Supabase user
+function getUserRole(user: { app_metadata?: { role?: string }; user_metadata?: { role?: string } } | null): string {
+  if (!user) return 'user';
+  return user.app_metadata?.role || user.user_metadata?.role || 'user';
+}
+
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
     request,
@@ -37,6 +43,10 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
+  // Get user role
+  const userRole = getUserRole(user)
+  const isAdmin = userRole === 'admin'
+
   // Define public routes that don't require authentication
   const publicRoutes = [
     '/login',
@@ -45,6 +55,13 @@ export async function updateSession(request: NextRequest) {
     '/forgot-password',
     '/reset-password',
     '/enroll', // Enrollment landing page (before auth)
+    '/admin/login', // Admin login page
+    '/admin/setup', // Initial admin setup page
+  ]
+
+  // Define admin-only routes
+  const adminRoutes = [
+    '/dashboard',
   ]
 
   // Define enrollment routes that need special handling
@@ -58,6 +75,10 @@ export async function updateSession(request: NextRequest) {
   ]
 
   const isPublicRoute = publicRoutes.some((route) =>
+    request.nextUrl.pathname === route || request.nextUrl.pathname.startsWith(route + '/')
+  )
+
+  const isAdminRoute = adminRoutes.some((route) =>
     request.nextUrl.pathname === route || request.nextUrl.pathname.startsWith(route + '/')
   )
 
@@ -82,9 +103,24 @@ export async function updateSession(request: NextRequest) {
       url.pathname = '/enroll'
       return NextResponse.redirect(url)
     }
+    // If trying to access admin routes, redirect to admin login
+    if (isAdminRoute) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/admin/login'
+      return NextResponse.redirect(url)
+    }
     // Otherwise redirect to admin login
     const url = request.nextUrl.clone()
-    url.pathname = '/login'
+    url.pathname = '/admin/login'
+    return NextResponse.redirect(url)
+  }
+
+  // If authenticated user tries to access admin routes but is not an admin
+  if (user && isAdminRoute && !isAdmin) {
+    // Redirect non-admin users to enrollment wizard or home
+    const url = request.nextUrl.clone()
+    url.pathname = '/enroll/wizard'
+    url.searchParams.set('error', 'unauthorized')
     return NextResponse.redirect(url)
   }
 
@@ -95,10 +131,25 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  // If user is authenticated and trying to access admin login/signup, redirect to dashboard
-  if (user && (request.nextUrl.pathname === '/login' || request.nextUrl.pathname === '/signup')) {
+  // If admin user is on admin login page, redirect to dashboard
+  if (user && isAdmin && request.nextUrl.pathname === '/admin/login') {
     const url = request.nextUrl.clone()
     url.pathname = '/dashboard'
+    return NextResponse.redirect(url)
+  }
+
+  // If regular user is on admin login page, let them try to login
+  // (they might be an admin who needs to authenticate)
+
+  // If user is authenticated and trying to access admin login/signup, redirect appropriately
+  if (user && (request.nextUrl.pathname === '/login' || request.nextUrl.pathname === '/signup')) {
+    const url = request.nextUrl.clone()
+    // Redirect based on role
+    if (isAdmin) {
+      url.pathname = '/dashboard'
+    } else {
+      url.pathname = '/enroll/wizard'
+    }
     return NextResponse.redirect(url)
   }
 

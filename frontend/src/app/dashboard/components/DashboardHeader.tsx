@@ -65,7 +65,7 @@ export default function DashboardHeader({
     setIsLoading(true);
     const supabase = createClient();
     await supabase.auth.signOut();
-    router.push('/login');
+    router.push('/admin/login');
   };
 
   return (
@@ -125,6 +125,9 @@ export default function DashboardHeader({
 
           {/* Right Section - User & Sign Out */}
           <div className="flex items-center gap-4">
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+              Admin
+            </span>
             {userEmail && (
               <span className="text-sm text-gray-600">{userEmail}</span>
             )}

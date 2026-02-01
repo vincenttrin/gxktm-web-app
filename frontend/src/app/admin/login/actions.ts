@@ -5,19 +5,24 @@ import { redirect } from 'next/navigation'
 
 import { createClient } from '@/utils/supabase/server'
 
-export async function login(formData: FormData) {
+/**
+ * Admin login action - uses email/password authentication.
+ * After successful login, verifies that the user has admin role.
+ */
+export async function adminLogin(formData: FormData) {
   const supabase = await createClient()
 
   const email = formData.get('email') as string
   const password = formData.get('password') as string
 
+  // Sign in with email and password
   const { data, error } = await supabase.auth.signInWithPassword({
     email,
     password,
   })
 
   if (error) {
-    redirect('/admin/login?error=Could not authenticate user')
+    redirect('/admin/login?error=' + encodeURIComponent('Invalid email or password'))
   }
 
   // Check if user has admin role
@@ -34,26 +39,10 @@ export async function login(formData: FormData) {
   redirect('/dashboard')
 }
 
-export async function signup(formData: FormData) {
-  const supabase = await createClient()
-
-  const email = formData.get('email') as string
-  const password = formData.get('password') as string
-
-  const { error } = await supabase.auth.signUp({
-    email,
-    password,
-  })
-
-  if (error) {
-    redirect('/signup?error=Could not authenticate user')
-  }
-
-  revalidatePath('/', 'layout')
-  redirect('/admin/login?message=Check email to continue sign in process')
-}
-
-export async function signout() {
+/**
+ * Admin logout action.
+ */
+export async function adminLogout() {
   const supabase = await createClient()
   await supabase.auth.signOut()
   revalidatePath('/', 'layout')

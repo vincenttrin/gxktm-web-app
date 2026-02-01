@@ -1,7 +1,15 @@
+'use client';
+
+import { AdminRoute } from '@/components/ProtectedRoute';
+
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  return <>{children}</>;
+  return (
+    <AdminRoute>
+      {children}
+    </AdminRoute>
+  );
 }
