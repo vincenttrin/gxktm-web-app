@@ -41,24 +41,6 @@ export function ConfirmationStep() {
         </p>
       </div>
       
-      {/* Confirmation Details */}
-      <div className="bg-green-50 rounded-xl border border-green-200 p-6">
-        <div className="flex items-start gap-4">
-          <div className="h-12 w-12 rounded-full bg-green-600 flex items-center justify-center flex-shrink-0">
-            <svg className="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-            </svg>
-          </div>
-          <div>
-            <h3 className="text-lg font-semibold text-green-900">Confirmation Email Sent</h3>
-            <p className="text-sm text-green-700 mt-1">
-              A confirmation email has been sent to your registered email address with all the enrollment details.
-              Please check your inbox (and spam folder) for the confirmation.
-            </p>
-          </div>
-        </div>
-      </div>
-      
       {/* Enrollment Summary */}
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
@@ -107,20 +89,12 @@ export function ConfirmationStep() {
               <span className="text-white text-xs font-bold">1</span>
             </div>
             <p className="text-sm text-blue-800">
-              <span className="font-medium">Check your email</span> – You will receive a confirmation email with enrollment details and next steps.
-            </p>
-          </li>
-          <li className="flex items-start gap-3">
-            <div className="h-6 w-6 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0 mt-0.5">
-              <span className="text-white text-xs font-bold">2</span>
-            </div>
-            <p className="text-sm text-blue-800">
               <span className="font-medium">Complete payment</span> – Tuition payment information will be sent separately. Payment is due before the first day of class.
             </p>
           </li>
           <li className="flex items-start gap-3">
             <div className="h-6 w-6 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0 mt-0.5">
-              <span className="text-white text-xs font-bold">3</span>
+              <span className="text-white text-xs font-bold">2</span>
             </div>
             <p className="text-sm text-blue-800">
               <span className="font-medium">Mark your calendar</span> – The first day of class will be announced via email. Please arrive 15 minutes early for registration.

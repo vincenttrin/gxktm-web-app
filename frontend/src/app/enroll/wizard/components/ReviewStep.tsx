@@ -316,22 +316,6 @@ export function ReviewStep() {
         </div>
       </div>
       
-      {/* Terms and Submit */}
-      <div className="bg-blue-50 rounded-xl border border-blue-200 p-6">
-        <div className="flex items-start gap-3">
-          <svg className="h-6 w-6 text-blue-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          <div>
-            <h4 className="font-medium text-blue-900">Ready to Submit</h4>
-            <p className="text-sm text-blue-700 mt-1">
-              By submitting this enrollment, you confirm that all information provided is accurate. 
-              You will receive a confirmation email once your enrollment has been processed.
-            </p>
-          </div>
-        </div>
-      </div>
-      
       {/* Navigation */}
       <div className="flex items-center justify-between pt-4 border-t border-gray-200">
         <button
