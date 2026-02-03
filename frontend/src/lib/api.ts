@@ -41,6 +41,7 @@ import {
   SchoolYearAutoCreateCheck,
   SchoolYearTransitionCheck,
 } from '@/types/family';
+import { createClient } from '@/utils/supabase/client';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
@@ -52,6 +53,26 @@ class ApiError extends Error {
     this.name = 'ApiError';
     this.status = status;
   }
+}
+
+/**
+ * Get the current user's access token for API calls
+ * This is used to authenticate admin API requests
+ */
+async function getAuthHeaders(): Promise<HeadersInit> {
+  const supabase = createClient();
+  const { data: { session } } = await supabase.auth.getSession();
+  
+  if (session?.access_token) {
+    return {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${session.access_token}`,
+    };
+  }
+  
+  return {
+    'Content-Type': 'application/json',
+  };
 }
 
 async function handleResponse<T>(response: Response): Promise<T> {
@@ -107,9 +128,10 @@ export async function getFamily(familyId: string): Promise<Family> {
 }
 
 export async function createFamily(data: FamilyCreate): Promise<Family> {
+  const headers = await getAuthHeaders();
   const response = await fetch(`${API_BASE_URL}/api/families`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     body: JSON.stringify(data),
   });
   
@@ -117,9 +139,10 @@ export async function createFamily(data: FamilyCreate): Promise<Family> {
 }
 
 export async function updateFamily(familyId: string, data: FamilyUpdate): Promise<Family> {
+  const headers = await getAuthHeaders();
   const response = await fetch(`${API_BASE_URL}/api/families/${familyId}`, {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     body: JSON.stringify(data),
   });
   
@@ -127,8 +150,10 @@ export async function updateFamily(familyId: string, data: FamilyUpdate): Promis
 }
 
 export async function deleteFamily(familyId: string): Promise<void> {
+  const headers = await getAuthHeaders();
   const response = await fetch(`${API_BASE_URL}/api/families/${familyId}`, {
     method: 'DELETE',
+    headers,
   });
   
   return handleResponse<void>(response);
@@ -137,9 +162,10 @@ export async function deleteFamily(familyId: string): Promise<void> {
 // --- Guardian API ---
 
 export async function createGuardian(familyId: string, data: GuardianCreate): Promise<Guardian> {
+  const headers = await getAuthHeaders();
   const response = await fetch(`${API_BASE_URL}/api/families/${familyId}/guardians`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     body: JSON.stringify(data),
   });
   
@@ -151,11 +177,12 @@ export async function updateGuardian(
   guardianId: string,
   data: Partial<GuardianCreate>
 ): Promise<Guardian> {
+  const headers = await getAuthHeaders();
   const response = await fetch(
     `${API_BASE_URL}/api/families/${familyId}/guardians/${guardianId}`,
     {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify(data),
     }
   );
@@ -164,9 +191,10 @@ export async function updateGuardian(
 }
 
 export async function deleteGuardian(familyId: string, guardianId: string): Promise<void> {
+  const headers = await getAuthHeaders();
   const response = await fetch(
     `${API_BASE_URL}/api/families/${familyId}/guardians/${guardianId}`,
-    { method: 'DELETE' }
+    { method: 'DELETE', headers }
   );
   
   return handleResponse<void>(response);
@@ -175,9 +203,10 @@ export async function deleteGuardian(familyId: string, guardianId: string): Prom
 // --- Student API ---
 
 export async function createStudent(familyId: string, data: StudentCreate): Promise<Student> {
+  const headers = await getAuthHeaders();
   const response = await fetch(`${API_BASE_URL}/api/families/${familyId}/students`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     body: JSON.stringify(data),
   });
   
@@ -189,11 +218,12 @@ export async function updateStudent(
   studentId: string,
   data: Partial<StudentCreate>
 ): Promise<Student> {
+  const headers = await getAuthHeaders();
   const response = await fetch(
     `${API_BASE_URL}/api/families/${familyId}/students/${studentId}`,
     {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify(data),
     }
   );
@@ -202,9 +232,10 @@ export async function updateStudent(
 }
 
 export async function deleteStudent(familyId: string, studentId: string): Promise<void> {
+  const headers = await getAuthHeaders();
   const response = await fetch(
     `${API_BASE_URL}/api/families/${familyId}/students/${studentId}`,
-    { method: 'DELETE' }
+    { method: 'DELETE', headers }
   );
   
   return handleResponse<void>(response);
@@ -216,11 +247,12 @@ export async function createEmergencyContact(
   familyId: string,
   data: EmergencyContactCreate
 ): Promise<EmergencyContact> {
+  const headers = await getAuthHeaders();
   const response = await fetch(
     `${API_BASE_URL}/api/families/${familyId}/emergency-contacts`,
     {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify(data),
     }
   );
@@ -233,11 +265,12 @@ export async function updateEmergencyContact(
   contactId: string,
   data: Partial<EmergencyContactCreate>
 ): Promise<EmergencyContact> {
+  const headers = await getAuthHeaders();
   const response = await fetch(
     `${API_BASE_URL}/api/families/${familyId}/emergency-contacts/${contactId}`,
     {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify(data),
     }
   );
@@ -249,9 +282,10 @@ export async function deleteEmergencyContact(
   familyId: string,
   contactId: string
 ): Promise<void> {
+  const headers = await getAuthHeaders();
   const response = await fetch(
     `${API_BASE_URL}/api/families/${familyId}/emergency-contacts/${contactId}`,
-    { method: 'DELETE' }
+    { method: 'DELETE', headers }
   );
   
   return handleResponse<void>(response);
@@ -313,9 +347,10 @@ export async function getSchoolYear(schoolYearId: number): Promise<SchoolYearWit
 }
 
 export async function createSchoolYear(data: SchoolYearCreate): Promise<SchoolYear> {
+  const headers = await getAuthHeaders();
   const response = await fetch(`${API_BASE_URL}/api/school-years`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     body: JSON.stringify(data),
   });
   
@@ -326,9 +361,10 @@ export async function updateSchoolYear(
   schoolYearId: number,
   data: SchoolYearUpdate
 ): Promise<SchoolYear> {
+  const headers = await getAuthHeaders();
   const response = await fetch(`${API_BASE_URL}/api/school-years/${schoolYearId}`, {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     body: JSON.stringify(data),
   });
   
@@ -338,9 +374,10 @@ export async function updateSchoolYear(
 export async function transitionSchoolYear(
   newActiveYearId: number
 ): Promise<SchoolYearTransitionResponse> {
+  const headers = await getAuthHeaders();
   const response = await fetch(`${API_BASE_URL}/api/school-years/transition`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     body: JSON.stringify({ new_active_year_id: newActiveYearId }),
   });
   
@@ -348,8 +385,10 @@ export async function transitionSchoolYear(
 }
 
 export async function deleteSchoolYear(schoolYearId: number): Promise<void> {
+  const headers = await getAuthHeaders();
   const response = await fetch(`${API_BASE_URL}/api/school-years/${schoolYearId}`, {
     method: 'DELETE',
+    headers,
   });
   
   return handleResponse<void>(response);
@@ -380,10 +419,12 @@ export async function copyClassesFromPreviousYear(
     params.set('source_year_id', sourceYearId.toString());
   }
   
+  const headers = await getAuthHeaders();
   const response = await fetch(
     `${API_BASE_URL}/api/school-years/${schoolYearId}/copy-classes?${params.toString()}`,
     {
       method: 'POST',
+      headers,
     }
   );
   
@@ -432,9 +473,10 @@ export async function getClass(classId: string): Promise<ClassWithEnrollments> {
 }
 
 export async function createClass(data: ClassCreate): Promise<ClassItem> {
+  const headers = await getAuthHeaders();
   const response = await fetch(`${API_BASE_URL}/api/classes`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     body: JSON.stringify(data),
   });
   
@@ -442,9 +484,10 @@ export async function createClass(data: ClassCreate): Promise<ClassItem> {
 }
 
 export async function updateClass(classId: string, data: ClassUpdate): Promise<ClassItem> {
+  const headers = await getAuthHeaders();
   const response = await fetch(`${API_BASE_URL}/api/classes/${classId}`, {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     body: JSON.stringify(data),
   });
   
@@ -452,8 +495,10 @@ export async function updateClass(classId: string, data: ClassUpdate): Promise<C
 }
 
 export async function deleteClass(classId: string): Promise<void> {
+  const headers = await getAuthHeaders();
   const response = await fetch(`${API_BASE_URL}/api/classes/${classId}`, {
     method: 'DELETE',
+    headers,
   });
   
   return handleResponse<void>(response);
@@ -465,9 +510,10 @@ export async function enrollStudent(
   classId: string,
   studentId: string
 ): Promise<Enrollment> {
+  const headers = await getAuthHeaders();
   const response = await fetch(`${API_BASE_URL}/api/classes/${classId}/enrollments`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     body: JSON.stringify({ student_id: studentId, class_id: classId }),
   });
   
@@ -478,9 +524,10 @@ export async function unenrollStudent(
   classId: string,
   studentId: string
 ): Promise<void> {
+  const headers = await getAuthHeaders();
   const response = await fetch(
     `${API_BASE_URL}/api/classes/${classId}/enrollments/${studentId}`,
-    { method: 'DELETE' }
+    { method: 'DELETE', headers }
   );
   
   return handleResponse<void>(response);
@@ -534,9 +581,10 @@ export async function getPayment(paymentId: string): Promise<Payment> {
 }
 
 export async function createPayment(data: PaymentCreate): Promise<Payment> {
+  const headers = await getAuthHeaders();
   const response = await fetch(`${API_BASE_URL}/api/payments`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     body: JSON.stringify(data),
   });
   
@@ -544,9 +592,10 @@ export async function createPayment(data: PaymentCreate): Promise<Payment> {
 }
 
 export async function updatePayment(paymentId: string, data: PaymentUpdate): Promise<Payment> {
+  const headers = await getAuthHeaders();
   const response = await fetch(`${API_BASE_URL}/api/payments/${paymentId}`, {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     body: JSON.stringify(data),
   });
   
@@ -554,8 +603,10 @@ export async function updatePayment(paymentId: string, data: PaymentUpdate): Pro
 }
 
 export async function deletePayment(paymentId: string): Promise<void> {
+  const headers = await getAuthHeaders();
   const response = await fetch(`${API_BASE_URL}/api/payments/${paymentId}`, {
     method: 'DELETE',
+    headers,
   });
   
   return handleResponse<void>(response);
@@ -574,9 +625,10 @@ export async function markFamilyAsPaid(
   if (paymentMethod) searchParams.set('payment_method', paymentMethod);
   if (notes) searchParams.set('notes', notes);
   
+  const headers = await getAuthHeaders();
   const response = await fetch(
     `${API_BASE_URL}/api/payments/mark-paid/${familyId}?${searchParams.toString()}`,
-    { method: 'POST' }
+    { method: 'POST', headers }
   );
   
   return handleResponse<Payment>(response);
@@ -655,9 +707,10 @@ export async function getStudentsWithEnrollments(
   if (search) searchParams.set('search', search);
   if (familyId) searchParams.set('family_id', familyId);
   
+  const headers = await getAuthHeaders();
   const response = await fetch(
     `${API_BASE_URL}/api/enrollments/students?${searchParams.toString()}`,
-    { cache: 'no-store' }
+    { cache: 'no-store', headers }
   );
   
   return handleResponse<StudentEnrollmentInfo[]>(response);
@@ -666,9 +719,10 @@ export async function getStudentsWithEnrollments(
 export async function manualEnrollStudent(
   data: ManualEnrollmentCreate
 ): Promise<ManualEnrollmentResponse> {
+  const headers = await getAuthHeaders();
   const response = await fetch(`${API_BASE_URL}/api/enrollments/manual`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     body: JSON.stringify(data),
   });
   
@@ -678,9 +732,10 @@ export async function manualEnrollStudent(
 export async function bulkEnrollStudents(
   data: BulkEnrollmentCreate
 ): Promise<BulkEnrollmentResponse> {
+  const headers = await getAuthHeaders();
   const response = await fetch(`${API_BASE_URL}/api/enrollments/bulk`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     body: JSON.stringify(data),
   });
   
@@ -688,21 +743,93 @@ export async function bulkEnrollStudents(
 }
 
 export async function getStudentEnrollments(studentId: string): Promise<ClassItem[]> {
+  const headers = await getAuthHeaders();
   const response = await fetch(
     `${API_BASE_URL}/api/enrollments/student/${studentId}/classes`,
-    { cache: 'no-store' }
+    { cache: 'no-store', headers }
   );
   
   return handleResponse<ClassItem[]>(response);
 }
 
 export async function removeEnrollment(studentId: string, classId: string): Promise<void> {
+  const headers = await getAuthHeaders();
   const response = await fetch(
     `${API_BASE_URL}/api/enrollments/${studentId}/${classId}`,
-    { method: 'DELETE' }
+    { method: 'DELETE', headers }
   );
   
   return handleResponse<void>(response);
+}
+
+// --- Admin User Management API ---
+
+export interface AdminUser {
+  id: string;
+  email: string;
+  role: 'admin' | 'user';
+  created_at: string;
+  last_sign_in_at: string | null;
+  email_confirmed: boolean;
+}
+
+export interface AdminUserCounts {
+  total: number;
+  admin_count: number;
+  user_count: number;
+}
+
+export interface UserRoleUpdateResponse {
+  id: string;
+  email: string;
+  role: string;
+  message: string;
+}
+
+export async function getAdminUsers(
+  page: number = 1,
+  perPage: number = 50,
+  search?: string
+): Promise<AdminUser[]> {
+  const headers = await getAuthHeaders();
+  const searchParams = new URLSearchParams();
+  searchParams.set('page', page.toString());
+  searchParams.set('per_page', perPage.toString());
+  if (search) searchParams.set('search', search);
+  
+  const response = await fetch(
+    `${API_BASE_URL}/api/admin/users?${searchParams.toString()}`,
+    { headers, cache: 'no-store' }
+  );
+  
+  return handleResponse<AdminUser[]>(response);
+}
+
+export async function getAdminUserCounts(): Promise<AdminUserCounts> {
+  const headers = await getAuthHeaders();
+  const response = await fetch(
+    `${API_BASE_URL}/api/admin/users/count`,
+    { headers, cache: 'no-store' }
+  );
+  
+  return handleResponse<AdminUserCounts>(response);
+}
+
+export async function updateUserRole(
+  userId: string,
+  role: 'admin' | 'user'
+): Promise<UserRoleUpdateResponse> {
+  const headers = await getAuthHeaders();
+  const response = await fetch(
+    `${API_BASE_URL}/api/admin/users/${userId}/role`,
+    {
+      method: 'PUT',
+      headers,
+      body: JSON.stringify({ role }),
+    }
+  );
+  
+  return handleResponse<UserRoleUpdateResponse>(response);
 }
 
 export { ApiError };

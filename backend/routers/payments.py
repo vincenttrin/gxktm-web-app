@@ -6,6 +6,8 @@ This router provides endpoints for:
 - Quick mark-as-paid functionality
 - Payment summaries and reports
 - CSV export
+
+All write operations require admin privileges.
 """
 
 from uuid import UUID
@@ -22,6 +24,7 @@ from sqlalchemy.orm import selectinload
 import math
 
 from database import get_db
+from auth import require_admin, UserInfo
 from models import Payment, Family, PaymentStatus, Student, Enrollment, Class, AcademicYear, Guardian
 from schemas import (
     PaymentCreate,
@@ -363,8 +366,9 @@ async def get_enrolled_families_summary(
 async def create_payment(
     payment_data: PaymentCreate,
     db: AsyncSession = Depends(get_db),
+    user: UserInfo = Depends(require_admin),
 ):
-    """Create a new payment record."""
+    """Create a new payment record. (Admin only)"""
     
     # Verify family exists
     family_result = await db.execute(
@@ -425,8 +429,9 @@ async def update_payment(
     payment_id: UUID,
     payment_data: PaymentUpdate,
     db: AsyncSession = Depends(get_db),
+    user: UserInfo = Depends(require_admin),
 ):
-    """Update an existing payment."""
+    """Update an existing payment. (Admin only)"""
     result = await db.execute(
         select(Payment).where(Payment.id == payment_id)
     )
@@ -462,8 +467,9 @@ async def update_payment(
 async def delete_payment(
     payment_id: UUID,
     db: AsyncSession = Depends(get_db),
+    user: UserInfo = Depends(require_admin),
 ):
-    """Delete a payment record."""
+    """Delete a payment record. (Admin only)"""
     result = await db.execute(
         select(Payment).where(Payment.id == payment_id)
     )
@@ -485,8 +491,9 @@ async def mark_family_as_paid(
     payment_method: Optional[str] = Query("cash"),
     notes: Optional[str] = Query(None),
     db: AsyncSession = Depends(get_db),
+    user: UserInfo = Depends(require_admin),
 ):
-    """Quick action to mark a family as paid for a school year."""
+    """Quick action to mark a family as paid for a school year. (Admin only)"""
     
     # Verify family exists
     family_result = await db.execute(

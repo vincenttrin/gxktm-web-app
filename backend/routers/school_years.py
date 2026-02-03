@@ -6,6 +6,8 @@ This router provides endpoints for:
 - Getting the active and newest school years
 - Transitioning between school years
 - School year statistics
+
+All write operations require admin privileges.
 """
 
 from datetime import date, datetime
@@ -16,6 +18,7 @@ from sqlalchemy import select, func, desc
 from sqlalchemy.orm import selectinload
 
 from database import get_db
+from auth import require_admin, UserInfo
 from models import AcademicYear, Class, Enrollment
 from schemas import (
     AcademicYearCreate,
@@ -265,9 +268,10 @@ async def get_school_year(
 async def create_school_year(
     year_data: AcademicYearCreate,
     db: AsyncSession = Depends(get_db),
+    user: UserInfo = Depends(require_admin),
 ):
     """
-    Create a new school year.
+    Create a new school year. (Admin only)
     
     If start_year and end_year are not provided, they will be parsed from the name.
     If transition_date is not provided, defaults to July 1st of the start year.
@@ -343,9 +347,10 @@ async def update_school_year(
     year_id: int,
     year_data: AcademicYearUpdate,
     db: AsyncSession = Depends(get_db),
+    user: UserInfo = Depends(require_admin),
 ):
     """
-    Update a school year.
+    Update a school year. (Admin only)
     
     Note: Setting is_active=True will automatically deactivate other years.
     """
@@ -403,9 +408,10 @@ async def update_school_year(
 async def transition_school_year(
     request: SchoolYearTransitionRequest,
     db: AsyncSession = Depends(get_db),
+    user: UserInfo = Depends(require_admin),
 ):
     """
-    Transition to a new active school year.
+    Transition to a new active school year. (Admin only)
     
     This will:
     1. Set the previous active year as inactive (archived)
@@ -451,9 +457,10 @@ async def transition_school_year(
 async def delete_school_year(
     year_id: int,
     db: AsyncSession = Depends(get_db),
+    user: UserInfo = Depends(require_admin),
 ):
     """
-    Delete a school year.
+    Delete a school year. (Admin only)
     
     Warning: This will fail if there are classes associated with this year.
     """

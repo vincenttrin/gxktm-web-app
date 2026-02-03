@@ -1,24 +1,32 @@
 'use client';
 
 import { useState } from 'react';
-import { Users, GraduationCap, DollarSign, Calendar } from 'lucide-react';
+import { Users, GraduationCap, DollarSign, Calendar, Shield } from 'lucide-react';
 import DashboardHeader, { DisplayYear } from './components/DashboardHeader';
 import FamilyList from './components/FamilyList';
 import ClassList from './components/ClassList';
 import PaymentList from './components/PaymentList';
 import SchoolYearManagement from './components/SchoolYearManagement';
+import AdminManagement from './components/AdminManagement';
+import Toast from './components/Toast';
 
-type TabType = 'families' | 'classes' | 'payments' | 'school-years';
+type TabType = 'families' | 'classes' | 'payments' | 'school-years' | 'admin-users';
 
 export default function DashboardPage() {
   const [selectedYear, setSelectedYear] = useState<DisplayYear | null>(null);
   const [activeTab, setActiveTab] = useState<TabType>('families');
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+
+  const showToast = (message: string, type: 'success' | 'error') => {
+    setToast({ message, type });
+  };
 
   const tabs = [
     { id: 'families' as TabType, label: 'Families', icon: Users },
     { id: 'classes' as TabType, label: 'Classes', icon: GraduationCap },
     { id: 'payments' as TabType, label: 'Payments', icon: DollarSign },
     { id: 'school-years' as TabType, label: 'School Years', icon: Calendar },
+    { id: 'admin-users' as TabType, label: 'Admin Users', icon: Shield },
   ];
 
   return (
@@ -63,7 +71,20 @@ export default function DashboardPage() {
           </div>
         )}
         {activeTab === 'school-years' && <SchoolYearManagement />}
+        {activeTab === 'admin-users' && (
+          <div className="p-6">
+            <AdminManagement onShowToast={showToast} />
+          </div>
+        )}
       </main>
+
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
     </div>
   );
 }

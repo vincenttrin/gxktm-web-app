@@ -7,6 +7,7 @@ from sqlalchemy.orm import selectinload
 import math
 
 from database import get_db
+from auth import require_admin, UserInfo
 from models import Family, Guardian, EmergencyContact, Student, AcademicYear, Payment, Enrollment
 from schemas import (
     FamilyCreate,
@@ -267,8 +268,12 @@ async def get_family(family_id: UUID, db: AsyncSession = Depends(get_db)):
 
 
 @router.post("", response_model=FamilyResponse, status_code=201)
-async def create_family(family_data: FamilyCreate, db: AsyncSession = Depends(get_db)):
-    """Create a new family with optional guardians, students, and emergency contacts."""
+async def create_family(
+    family_data: FamilyCreate,
+    db: AsyncSession = Depends(get_db),
+    user: UserInfo = Depends(require_admin),
+):
+    """Create a new family with optional guardians, students, and emergency contacts. (Admin only)"""
     
     # Create the family
     family = Family(
@@ -337,9 +342,12 @@ async def create_family(family_data: FamilyCreate, db: AsyncSession = Depends(ge
 
 @router.put("/{family_id}", response_model=FamilyResponse)
 async def update_family(
-    family_id: UUID, family_data: FamilyUpdate, db: AsyncSession = Depends(get_db)
+    family_id: UUID,
+    family_data: FamilyUpdate,
+    db: AsyncSession = Depends(get_db),
+    user: UserInfo = Depends(require_admin),
 ):
-    """Update a family's basic information."""
+    """Update a family's basic information. (Admin only)"""
     result = await db.execute(select(Family).where(Family.id == family_id))
     family = result.scalar_one_or_none()
     
@@ -367,8 +375,12 @@ async def update_family(
 
 
 @router.delete("/{family_id}", status_code=204)
-async def delete_family(family_id: UUID, db: AsyncSession = Depends(get_db)):
-    """Delete a family and all related data."""
+async def delete_family(
+    family_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    user: UserInfo = Depends(require_admin),
+):
+    """Delete a family and all related data. (Admin only)"""
     result = await db.execute(select(Family).where(Family.id == family_id))
     family = result.scalar_one_or_none()
     
@@ -384,9 +396,12 @@ async def delete_family(family_id: UUID, db: AsyncSession = Depends(get_db)):
 
 @router.post("/{family_id}/guardians", response_model=GuardianResponse, status_code=201)
 async def create_guardian(
-    family_id: UUID, guardian_data: GuardianCreate, db: AsyncSession = Depends(get_db)
+    family_id: UUID,
+    guardian_data: GuardianCreate,
+    db: AsyncSession = Depends(get_db),
+    user: UserInfo = Depends(require_admin),
 ):
-    """Add a guardian to a family."""
+    """Add a guardian to a family. (Admin only)"""
     # Verify family exists
     result = await db.execute(select(Family).where(Family.id == family_id))
     if not result.scalar_one_or_none():
@@ -411,8 +426,9 @@ async def update_guardian(
     guardian_id: UUID,
     guardian_data: GuardianUpdate,
     db: AsyncSession = Depends(get_db),
+    user: UserInfo = Depends(require_admin),
 ):
-    """Update a guardian."""
+    """Update a guardian. (Admin only)"""
     result = await db.execute(
         select(Guardian).where(Guardian.id == guardian_id, Guardian.family_id == family_id)
     )
@@ -432,9 +448,12 @@ async def update_guardian(
 
 @router.delete("/{family_id}/guardians/{guardian_id}", status_code=204)
 async def delete_guardian(
-    family_id: UUID, guardian_id: UUID, db: AsyncSession = Depends(get_db)
+    family_id: UUID,
+    guardian_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    user: UserInfo = Depends(require_admin),
 ):
-    """Delete a guardian."""
+    """Delete a guardian. (Admin only)"""
     result = await db.execute(
         select(Guardian).where(Guardian.id == guardian_id, Guardian.family_id == family_id)
     )
@@ -452,9 +471,12 @@ async def delete_guardian(
 
 @router.post("/{family_id}/students", response_model=StudentResponse, status_code=201)
 async def create_student(
-    family_id: UUID, student_data: StudentCreate, db: AsyncSession = Depends(get_db)
+    family_id: UUID,
+    student_data: StudentCreate,
+    db: AsyncSession = Depends(get_db),
+    user: UserInfo = Depends(require_admin),
 ):
-    """Add a student to a family."""
+    """Add a student to a family. (Admin only)"""
     # Verify family exists
     result = await db.execute(select(Family).where(Family.id == family_id))
     if not result.scalar_one_or_none():
@@ -484,8 +506,9 @@ async def update_student(
     student_id: UUID,
     student_data: StudentUpdate,
     db: AsyncSession = Depends(get_db),
+    user: UserInfo = Depends(require_admin),
 ):
-    """Update a student."""
+    """Update a student. (Admin only)"""
     result = await db.execute(
         select(Student).where(Student.id == student_id, Student.family_id == family_id)
     )
@@ -505,9 +528,12 @@ async def update_student(
 
 @router.delete("/{family_id}/students/{student_id}", status_code=204)
 async def delete_student(
-    family_id: UUID, student_id: UUID, db: AsyncSession = Depends(get_db)
+    family_id: UUID,
+    student_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    user: UserInfo = Depends(require_admin),
 ):
-    """Delete a student."""
+    """Delete a student. (Admin only)"""
     result = await db.execute(
         select(Student).where(Student.id == student_id, Student.family_id == family_id)
     )
@@ -532,8 +558,9 @@ async def create_emergency_contact(
     family_id: UUID,
     contact_data: EmergencyContactCreate,
     db: AsyncSession = Depends(get_db),
+    user: UserInfo = Depends(require_admin),
 ):
-    """Add an emergency contact to a family."""
+    """Add an emergency contact to a family. (Admin only)"""
     # Verify family exists
     result = await db.execute(select(Family).where(Family.id == family_id))
     if not result.scalar_one_or_none():
@@ -561,8 +588,9 @@ async def update_emergency_contact(
     contact_id: UUID,
     contact_data: EmergencyContactUpdate,
     db: AsyncSession = Depends(get_db),
+    user: UserInfo = Depends(require_admin),
 ):
-    """Update an emergency contact."""
+    """Update an emergency contact. (Admin only)"""
     result = await db.execute(
         select(EmergencyContact).where(
             EmergencyContact.id == contact_id, EmergencyContact.family_id == family_id
@@ -584,9 +612,12 @@ async def update_emergency_contact(
 
 @router.delete("/{family_id}/emergency-contacts/{contact_id}", status_code=204)
 async def delete_emergency_contact(
-    family_id: UUID, contact_id: UUID, db: AsyncSession = Depends(get_db)
+    family_id: UUID,
+    contact_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    user: UserInfo = Depends(require_admin),
 ):
-    """Delete an emergency contact."""
+    """Delete an emergency contact. (Admin only)"""
     result = await db.execute(
         select(EmergencyContact).where(
             EmergencyContact.id == contact_id, EmergencyContact.family_id == family_id

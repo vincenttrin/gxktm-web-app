@@ -6,6 +6,8 @@ This router provides endpoints for:
 - Bulk enrollment of students into classes
 - Viewing student enrollments
 - Removing enrollments
+
+All endpoints in this router require admin privileges.
 """
 
 from uuid import UUID
@@ -26,6 +28,7 @@ from schemas import (
     StudentEnrollmentInfo,
     ClassResponse,
 )
+from auth import require_admin, UserInfo
 
 router = APIRouter(prefix="/api/enrollments", tags=["enrollments"])
 
@@ -37,8 +40,9 @@ async def get_students_with_enrollments(
     search: Optional[str] = Query(None),
     family_id: Optional[UUID] = Query(None),
     db: AsyncSession = Depends(get_db),
+    user: UserInfo = Depends(require_admin),
 ):
-    """Get students with their current class enrollments."""
+    """Get students with their current class enrollments. (Admin only)"""
     
     query = select(Student).options(
         selectinload(Student.family),
@@ -90,8 +94,9 @@ async def get_students_with_enrollments(
 async def manual_enroll_student(
     enrollment_data: ManualEnrollmentCreate,
     db: AsyncSession = Depends(get_db),
+    user: UserInfo = Depends(require_admin),
 ):
-    """Manually enroll a student into one or more classes."""
+    """Manually enroll a student into one or more classes. (Admin only)"""
     
     # Verify student exists
     student_result = await db.execute(
@@ -154,8 +159,9 @@ async def manual_enroll_student(
 async def bulk_enroll_students(
     enrollment_data: BulkEnrollmentCreate,
     db: AsyncSession = Depends(get_db),
+    user: UserInfo = Depends(require_admin),
 ):
-    """Enroll multiple students into a single class."""
+    """Enroll multiple students into a single class. (Admin only)"""
     
     # Verify class exists
     class_result = await db.execute(
@@ -218,8 +224,9 @@ async def bulk_enroll_students(
 async def get_student_classes(
     student_id: UUID,
     db: AsyncSession = Depends(get_db),
+    user: UserInfo = Depends(require_admin),
 ):
-    """Get all classes a student is enrolled in."""
+    """Get all classes a student is enrolled in. (Admin only)"""
     
     # Verify student exists
     student_result = await db.execute(
@@ -246,8 +253,9 @@ async def remove_enrollment(
     student_id: UUID,
     class_id: UUID,
     db: AsyncSession = Depends(get_db),
+    user: UserInfo = Depends(require_admin),
 ):
-    """Remove a student from a class."""
+    """Remove a student from a class. (Admin only)"""
     
     result = await db.execute(
         select(Enrollment).where(

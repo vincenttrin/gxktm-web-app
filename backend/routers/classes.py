@@ -9,6 +9,7 @@ from sqlalchemy import select, func
 from sqlalchemy.orm import selectinload
 
 from database import get_db
+from auth import require_admin, UserInfo
 from models import Class, Program, Enrollment, Student, Family, AcademicYear
 from schemas import (
     ClassCreate,
@@ -123,8 +124,12 @@ async def get_class(class_id: UUID, db: AsyncSession = Depends(get_db)):
 
 
 @router.post("", response_model=ClassResponse, status_code=201)
-async def create_class(class_data: ClassCreate, db: AsyncSession = Depends(get_db)):
-    """Create a new class."""
+async def create_class(
+    class_data: ClassCreate,
+    db: AsyncSession = Depends(get_db),
+    user: UserInfo = Depends(require_admin),
+):
+    """Create a new class. (Admin only)"""
     # Verify program exists
     program_result = await db.execute(
         select(Program).where(Program.id == class_data.program_id)
@@ -156,9 +161,12 @@ async def create_class(class_data: ClassCreate, db: AsyncSession = Depends(get_d
 
 @router.put("/{class_id}", response_model=ClassResponse)
 async def update_class(
-    class_id: UUID, class_data: ClassUpdate, db: AsyncSession = Depends(get_db)
+    class_id: UUID,
+    class_data: ClassUpdate,
+    db: AsyncSession = Depends(get_db),
+    user: UserInfo = Depends(require_admin),
 ):
-    """Update a class."""
+    """Update a class. (Admin only)"""
     result = await db.execute(select(Class).where(Class.id == class_id))
     cls = result.scalar_one_or_none()
     
@@ -196,8 +204,12 @@ async def update_class(
 
 
 @router.delete("/{class_id}", status_code=204)
-async def delete_class(class_id: UUID, db: AsyncSession = Depends(get_db)):
-    """Delete a class and all associated enrollments."""
+async def delete_class(
+    class_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    user: UserInfo = Depends(require_admin),
+):
+    """Delete a class and all associated enrollments. (Admin only)"""
     result = await db.execute(select(Class).where(Class.id == class_id))
     cls = result.scalar_one_or_none()
     
@@ -218,9 +230,12 @@ async def delete_class(class_id: UUID, db: AsyncSession = Depends(get_db)):
 
 @router.post("/{class_id}/enrollments", response_model=EnrollmentResponse, status_code=201)
 async def enroll_student(
-    class_id: UUID, enrollment_data: EnrollmentCreate, db: AsyncSession = Depends(get_db)
+    class_id: UUID,
+    enrollment_data: EnrollmentCreate,
+    db: AsyncSession = Depends(get_db),
+    user: UserInfo = Depends(require_admin),
 ):
-    """Enroll a student in a class."""
+    """Enroll a student in a class. (Admin only)"""
     # Verify class exists
     class_result = await db.execute(select(Class).where(Class.id == class_id))
     if not class_result.scalar_one_or_none():
@@ -256,9 +271,12 @@ async def enroll_student(
 
 @router.delete("/{class_id}/enrollments/{student_id}", status_code=204)
 async def unenroll_student(
-    class_id: UUID, student_id: UUID, db: AsyncSession = Depends(get_db)
+    class_id: UUID,
+    student_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    user: UserInfo = Depends(require_admin),
 ):
-    """Remove a student enrollment from a class."""
+    """Remove a student enrollment from a class. (Admin only)"""
     result = await db.execute(
         select(Enrollment).where(
             Enrollment.student_id == student_id, Enrollment.class_id == class_id
