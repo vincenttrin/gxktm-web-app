@@ -19,6 +19,12 @@ const GRADE_LEVELS = [
   { value: 9, label: 'Level 9' },
 ];
 
+const COURSE_BADGE_STYLES = {
+  amber: 'bg-amber-100 text-amber-800',
+  blue: 'bg-blue-100 text-blue-800',
+  slate: 'bg-slate-100 text-slate-800',
+} as const;
+
 export function ClassSelectionStep() {
   const { state, updateClassSelections, goToNextStep, goToPreviousStep } = useEnrollment();
   const { formState, academicYear, suggestedEnrollments, isLoading } = state;
@@ -29,41 +35,10 @@ export function ClassSelectionStep() {
   useEffect(() => {
     if (children.length > 0 && classSelections.length === 0) {
       const initialSelections: ClassSelection[] = children.map((child) => {
-        // Find suggested enrollments for this student
-        const suggestion = suggestedEnrollments.find(s => s.student_id === child.id);
-        
         let giaoLyLevel: number | null = null;
         let vietNguLevel: number | null = null;
         let giaoLyCompleted = false;
         let vietNguCompleted = false;
-        
-        if (suggestion) {
-          suggestion.suggested_classes.forEach(sc => {
-            // Try to extract level from class name or use suggestion
-            if (sc.program_name?.toLowerCase().includes('giao ly') || sc.program_name?.toLowerCase().includes('giáo lý')) {
-              // Parse the level from class name (e.g., "Giao Ly 5" -> 5)
-              const match = sc.class_name.match(/(\d+)/);
-              if (match) {
-                const level = parseInt(match[1]);
-                if (level <= 9) {
-                  giaoLyLevel = level;
-                } else {
-                  giaoLyCompleted = true;
-                }
-              }
-            } else if (sc.program_name?.toLowerCase().includes('viet ngu') || sc.program_name?.toLowerCase().includes('việt ngữ')) {
-              const match = sc.class_name.match(/(\d+)/);
-              if (match) {
-                const level = parseInt(match[1]);
-                if (level <= 9) {
-                  vietNguLevel = level;
-                } else {
-                  vietNguCompleted = true;
-                }
-              }
-            }
-          });
-        }
         
         // Default to level 1 if no previous enrollment found and child has grade_level
         if (giaoLyLevel === null && !giaoLyCompleted && child.grade_level) {
@@ -84,7 +59,7 @@ export function ClassSelectionStep() {
       
       updateClassSelections(initialSelections);
     }
-  }, [children, classSelections.length, suggestedEnrollments, updateClassSelections]);
+  }, [children, classSelections.length, updateClassSelections]);
   
   // Ensure we have selections for all children
   const currentSelections = useMemo(() => {
@@ -179,6 +154,34 @@ export function ClassSelectionStep() {
           
           // Find any suggested enrollments for this child
           const suggestion = suggestedEnrollments.find(s => s.student_id === child.id);
+          const currentYearClasses = suggestion?.suggested_classes ?? [];
+          const currentCourseBadges: Array<{ id: string; label: string; tone: keyof typeof COURSE_BADGE_STYLES }> = [];
+          const completedPrograms: string[] = [];
+          currentYearClasses.forEach(cls => {
+            const programName = cls.program_name?.toLowerCase() || '';
+            const className = cls.class_name.toLowerCase();
+            const isGiaoLy = programName.includes('giao ly') || programName.includes('giáo lý') || className.includes('giao ly') || className.includes('giáo lý');
+            const isVietNgu = programName.includes('viet ngu') || programName.includes('việt ngữ') || className.includes('viet ngu') || className.includes('việt ngữ');
+            const match = cls.class_name.match(/(\d+)/);
+            const level = match ? parseInt(match[1], 10) : null;
+            
+            if (level === 9 && (isGiaoLy || isVietNgu)) {
+              if (isGiaoLy && !completedPrograms.includes('Giáo Lý')) {
+                completedPrograms.push('Giáo Lý');
+              }
+              if (isVietNgu && !completedPrograms.includes('Việt Ngữ')) {
+                completedPrograms.push('Việt Ngữ');
+              }
+              return;
+            }
+            
+            currentCourseBadges.push({
+              id: cls.class_id,
+              label: cls.class_name,
+              tone: isGiaoLy ? 'amber' : isVietNgu ? 'blue' : 'slate',
+            });
+          });
+          const hasCurrentCourseInfo = currentCourseBadges.length > 0 || completedPrograms.length > 0;
           
           return (
             <div key={child.id || index} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
@@ -200,14 +203,52 @@ export function ClassSelectionStep() {
                     {child.grade_level && (
                       <p className="text-sm text-gray-600">School Grade: {child.grade_level}</p>
                     )}
-                    {suggestion && suggestion.suggested_classes.length > 0 && (
-                      <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
-                        <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                    <div className="mt-3 rounded-lg border border-white/70 bg-white/60 px-3 py-2 text-xs text-gray-700">
+                      <div className="flex items-center gap-2 font-semibold">
+                        <svg className="h-3.5 w-3.5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-2.21 0-4 1.567-4 3.5S9.79 15 12 15s4-1.567 4-3.5S14.21 8 12 8z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6.343 17.657A8 8 0 1117.657 6.343 8 8 0 016.343 17.657z" />
                         </svg>
-                        Auto-suggested based on previous enrollment
-                      </p>
-                    )}
+                        <span>Current Academic Year</span>
+                        {academicYear && (
+                          <span className="font-normal text-gray-500">({academicYear.name})</span>
+                        )}
+                      </div>
+                      {hasCurrentCourseInfo ? (
+                        <>
+                          {currentCourseBadges.length > 0 && (
+                            <div className="mt-2 flex flex-wrap gap-2">
+                              {currentCourseBadges.map(course => (
+                                <span
+                                  key={course.id}
+                                  className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${COURSE_BADGE_STYLES[course.tone]}`}
+                                >
+                                  {course.label}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                          {completedPrograms.length > 0 && (
+                            <div className="mt-2 flex flex-wrap gap-2">
+                              {completedPrograms.map(program => (
+                                <span
+                                  key={program}
+                                  className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800"
+                                >
+                                  {program} completed
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <p className="mt-2 text-xs text-gray-600">
+                          {child.grade_level && child.grade_level >= 9
+                            ? 'Completed all courses for this academic year.'
+                            : 'No courses recorded for this academic year yet.'}
+                        </p>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>

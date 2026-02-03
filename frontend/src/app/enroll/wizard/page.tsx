@@ -37,7 +37,6 @@ export default function EnrollmentWizardPage() {
     setAvailableClasses,
     setPrograms,
     setSuggestedEnrollments,
-    updateClassSelections,
     setLoading,
     setError,
   } = useEnrollment();
@@ -92,36 +91,6 @@ export default function EnrollmentWizardPage() {
           // Get suggested enrollments with grade progression
           const suggestions = await getSuggestedEnrollments(lookupResult.family_id);
           setSuggestedEnrollments(suggestions.suggested_enrollments);
-          
-          // Convert suggestions to class selections format
-          const classSelections = suggestions.suggested_enrollments.flatMap(studentSuggestion => {
-            const student = familyData.students.find(s => s.id === studentSuggestion.student_id);
-            if (!student) return [];
-            
-            const selection = {
-              student_id: studentSuggestion.student_id,
-              giao_ly_level: null as number | null,
-              viet_ngu_level: null as number | null,
-              giao_ly_completed: false,
-              viet_ngu_completed: false,
-            };
-            
-            // Set suggested levels from auto-progression
-            studentSuggestion.suggested_classes.forEach(cls => {
-              const level = parseInt(cls.class_name.match(/\d+$/)?.[0] || '0');
-              if (cls.program_name?.toLowerCase().includes('giao') || 
-                  cls.program_name?.toLowerCase().includes('giáo')) {
-                selection.giao_ly_level = level;
-              } else if (cls.program_name?.toLowerCase().includes('viet') || 
-                         cls.program_name?.toLowerCase().includes('việt')) {
-                selection.viet_ngu_level = level;
-              }
-            });
-            
-            return [selection];
-          });
-          
-          updateClassSelections(classSelections);
         } else {
           // New family - set up empty family structure
           setNewFamily();
@@ -149,7 +118,6 @@ export default function EnrollmentWizardPage() {
     setAvailableClasses,
     setPrograms,
     setSuggestedEnrollments,
-    updateClassSelections,
     setLoading,
     setError,
   ]);

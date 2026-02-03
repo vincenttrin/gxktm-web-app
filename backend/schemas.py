@@ -479,7 +479,7 @@ class BulkEnrollmentResponse(BaseModel):
 
 class StudentEnrollmentInfo(BaseModel):
     id: UUID
-    family_id: UUID
+    family_id: Optional[UUID] = None
     first_name: str
     last_name: str
     family_name: Optional[str] = None

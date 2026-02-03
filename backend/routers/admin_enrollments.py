@@ -46,7 +46,7 @@ async def get_students_with_enrollments(
     
     query = select(Student).options(
         selectinload(Student.family),
-        selectinload(Student.enrollments).selectinload(Enrollment.class_),
+        selectinload(Student.enrollments).selectinload(Enrollment.assigned_class),
     )
     
     if family_id:
@@ -67,14 +67,17 @@ async def get_students_with_enrollments(
     for student in students:
         enrolled_classes = []
         for enrollment in student.enrollments:
-            if enrollment.class_:
-                enrolled_classes.append({
-                    "id": str(enrollment.class_.id),
-                    "name": enrollment.class_.name,
-                    "program_id": enrollment.class_.program_id,
-                    "academic_year_id": enrollment.class_.academic_year_id,
-                    "program": None,  # Could load if needed
-                })
+            if enrollment.assigned_class:
+                cls = enrollment.assigned_class
+                # Only include classes that have valid program_id and academic_year_id
+                if cls.program_id is not None and cls.academic_year_id is not None:
+                    enrolled_classes.append(ClassResponse(
+                        id=cls.id,
+                        name=cls.name,
+                        program_id=cls.program_id,
+                        academic_year_id=cls.academic_year_id,
+                        program=None,
+                    ))
         
         student_infos.append(StudentEnrollmentInfo(
             id=student.id,
