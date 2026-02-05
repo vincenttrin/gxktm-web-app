@@ -19,7 +19,7 @@ from sqlalchemy.orm import selectinload
 
 from database import get_db
 from auth import require_admin, UserInfo
-from models import AcademicYear, Class, Enrollment
+from models import AcademicYear, Class, Enrollment, Program
 from schemas import (
     AcademicYearCreate,
     AcademicYearUpdate,
@@ -326,6 +326,45 @@ async def create_school_year(
     await db.commit()
     await db.refresh(new_year)
     
+    # Create default classes for Giao Ly and Viet Ngu (grades 1-9)
+    # Get or create Giao Ly program
+    result = await db.execute(select(Program).where(Program.name == "Giao Ly"))
+    giao_ly_program = result.scalar_one_or_none()
+    if not giao_ly_program:
+        giao_ly_program = Program(name="Giao Ly")
+        db.add(giao_ly_program)
+        await db.commit()
+        await db.refresh(giao_ly_program)
+    
+    # Get or create Viet Ngu program
+    result = await db.execute(select(Program).where(Program.name == "Viet Ngu"))
+    viet_ngu_program = result.scalar_one_or_none()
+    if not viet_ngu_program:
+        viet_ngu_program = Program(name="Viet Ngu")
+        db.add(viet_ngu_program)
+        await db.commit()
+        await db.refresh(viet_ngu_program)
+    
+    # Create classes for Giao Ly 1-9
+    for grade in range(1, 10):
+        new_class = Class(
+            name=f"Giao Ly {grade}",
+            program_id=giao_ly_program.id,
+            academic_year_id=new_year.id,
+        )
+        db.add(new_class)
+    
+    # Create classes for Viet Ngu 1-9
+    for grade in range(1, 10):
+        new_class = Class(
+            name=f"Viet Ngu {grade}",
+            program_id=viet_ngu_program.id,
+            academic_year_id=new_year.id,
+        )
+        db.add(new_class)
+    
+    await db.commit()
+    
     status = compute_school_year_status(new_year)
     
     return AcademicYearResponse(
@@ -486,6 +525,7 @@ async def delete_school_year(
 
 @router.post("/check-auto-create")
 async def check_and_create_new_year(
+    create_if_missing: bool = Query(False, description="If True, automatically create the school year and classes"),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -494,6 +534,7 @@ async def check_and_create_new_year(
     Logic:
     - In January (or configurable month), check if next year exists
     - If not, suggest creating it
+    - If create_if_missing=True, create the year and default classes (Giao Ly 1-9, Viet Ngu 1-9)
     
     This endpoint can be called manually or by a scheduled job.
     Returns information about whether a new year should be created.
@@ -526,13 +567,88 @@ async def check_and_create_new_year(
             "existing_year_id": existing.id,
         }
     
+    # If not creating, just return the suggestion
+    if not create_if_missing:
+        return {
+            "should_create": True,
+            "suggested_name": next_year_label,
+            "suggested_start_year": current_calendar_year,
+            "suggested_end_year": current_calendar_year + 1,
+            "suggested_transition_date": f"{current_calendar_year}-07-01",
+            "reason": f"School year {next_year_label} does not exist and should be created",
+        }
+    
+    # Create the new school year
+    transition_date = date(current_calendar_year, 7, 1)
+    new_year = AcademicYear(
+        name=next_year_label,
+        start_year=current_calendar_year,
+        end_year=current_calendar_year + 1,
+        is_current=False,
+        is_active=False,
+        enrollment_open=True,
+        transition_date=transition_date,
+        created_at=datetime.utcnow(),
+    )
+    db.add(new_year)
+    await db.commit()
+    await db.refresh(new_year)
+    
+    # Create default classes for Giao Ly and Viet Ngu (grades 1-9)
+    classes_created = []
+    
+    # Get or create Giao Ly program
+    result = await db.execute(select(Program).where(Program.name == "Giao Ly"))
+    giao_ly_program = result.scalar_one_or_none()
+    if not giao_ly_program:
+        giao_ly_program = Program(name="Giao Ly")
+        db.add(giao_ly_program)
+        await db.commit()
+        await db.refresh(giao_ly_program)
+    
+    # Get or create Viet Ngu program
+    result = await db.execute(select(Program).where(Program.name == "Viet Ngu"))
+    viet_ngu_program = result.scalar_one_or_none()
+    if not viet_ngu_program:
+        viet_ngu_program = Program(name="Viet Ngu")
+        db.add(viet_ngu_program)
+        await db.commit()
+        await db.refresh(viet_ngu_program)
+    
+    # Create classes for Giao Ly 1-9
+    for grade in range(1, 10):
+        class_name = f"Giao Ly {grade}"
+        new_class = Class(
+            name=class_name,
+            program_id=giao_ly_program.id,
+            academic_year_id=new_year.id,
+        )
+        db.add(new_class)
+        classes_created.append(class_name)
+    
+    # Create classes for Viet Ngu 1-9
+    for grade in range(1, 10):
+        class_name = f"Viet Ngu {grade}"
+        new_class = Class(
+            name=class_name,
+            program_id=viet_ngu_program.id,
+            academic_year_id=new_year.id,
+        )
+        db.add(new_class)
+        classes_created.append(class_name)
+    
+    await db.commit()
+    
     return {
-        "should_create": True,
-        "suggested_name": next_year_label,
-        "suggested_start_year": current_calendar_year,
-        "suggested_end_year": current_calendar_year + 1,
-        "suggested_transition_date": f"{current_calendar_year}-07-01",
-        "reason": f"School year {next_year_label} does not exist and should be created",
+        "created": True,
+        "year_id": new_year.id,
+        "year_name": next_year_label,
+        "start_year": current_calendar_year,
+        "end_year": current_calendar_year + 1,
+        "transition_date": transition_date.isoformat(),
+        "classes_created": classes_created,
+        "total_classes_created": len(classes_created),
+        "reason": f"School year {next_year_label} created with {len(classes_created)} classes",
     }
 
 
