@@ -341,8 +341,8 @@ async def get_enrolled_families_summary(
     if not current_year:
         raise HTTPException(status_code=404, detail="No school year configured")
     
-    # Get enrolled families data
-    enrolled_data = await get_enrolled_families(db=db)
+    # Get enrolled families data - pass academic_year_id explicitly
+    enrolled_data = await get_enrolled_families(academic_year_id=current_year.id, db=db)
     
     # Calculate summary
     paid_count = sum(1 for f in enrolled_data.items if f.payment_status == "paid")

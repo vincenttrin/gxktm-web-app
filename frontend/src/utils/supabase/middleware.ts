@@ -45,30 +45,24 @@ export async function updateSession(request: NextRequest) {
 
   const {
     data: { user },
+    error: authError,
   } = await supabase.auth.getUser()
 
+  // If there's an auth error, treat as unauthenticated
+  // This handles cases where cookies exist but session is invalid/expired
+  const authenticatedUser = authError ? null : user;
+
   // Get user role from metadata
-  const userRole = user ? getUserRole(user.user_metadata) : null;
+  const userRole = authenticatedUser ? getUserRole(authenticatedUser.user_metadata) : null;
   const isAdmin = userRole === 'admin';
 
-  // Define public routes that don't require authentication
+  // Define public routes that don't require authentication (only auth-related pages)
   const publicRoutes = [
     '/login',
     '/signup',
     '/auth',
     '/forgot-password',
     '/reset-password',
-    '/enroll', // Enrollment landing page (before auth)
-  ]
-
-  // Define enrollment routes that need special handling
-  const enrollmentAuthRoutes = [
-    '/enroll/auth', // Enrollment auth callback
-  ]
-
-  // Define protected enrollment routes (require authentication)
-  const protectedEnrollmentRoutes = [
-    '/enroll/wizard',
   ]
 
   // Define admin-only routes (require admin role)
@@ -80,63 +74,31 @@ export async function updateSession(request: NextRequest) {
     request.nextUrl.pathname === route || request.nextUrl.pathname.startsWith(route + '/')
   )
 
-  const isEnrollmentAuthRoute = enrollmentAuthRoutes.some((route) =>
-    request.nextUrl.pathname.startsWith(route)
-  )
-
-  const isProtectedEnrollmentRoute = protectedEnrollmentRoutes.some((route) =>
-    request.nextUrl.pathname.startsWith(route)
-  )
-
   const isAdminOnlyRoute = adminOnlyRoutes.some((route) =>
     request.nextUrl.pathname === route || request.nextUrl.pathname.startsWith(route + '/')
   )
 
-  // Allow enrollment auth callback to proceed
-  if (isEnrollmentAuthRoute) {
-    return supabaseResponse
-  }
-
-  // If user is not authenticated and trying to access protected route
-  if (!user && !isPublicRoute) {
-    // If trying to access protected enrollment route, redirect to enrollment landing
-    if (isProtectedEnrollmentRoute) {
-      const url = request.nextUrl.clone()
-      url.pathname = '/enroll'
-      return NextResponse.redirect(url)
-    }
-    // Otherwise redirect to admin login
+  // If user is not authenticated and trying to access any non-public route, redirect to login
+  if (!authenticatedUser && !isPublicRoute) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
+    // Preserve the original destination for redirect after login
+    url.searchParams.set('redirect', request.nextUrl.pathname)
     return NextResponse.redirect(url)
   }
 
   // If user is authenticated but not admin and trying to access admin route
-  if (user && isAdminOnlyRoute && !isAdmin) {
+  if (authenticatedUser && isAdminOnlyRoute && !isAdmin) {
     // Redirect non-admin users to unauthorized page or home
     const url = request.nextUrl.clone()
     url.pathname = '/unauthorized'
     return NextResponse.redirect(url)
   }
 
-  // If user is authenticated and on enrollment landing page, redirect to wizard
-  if (user && request.nextUrl.pathname === '/enroll') {
+  // If authenticated user is on login/signup page, redirect appropriately
+  if (authenticatedUser && (request.nextUrl.pathname === '/login' || request.nextUrl.pathname === '/signup')) {
     const url = request.nextUrl.clone()
-    url.pathname = '/enroll/wizard'
-    return NextResponse.redirect(url)
-  }
-
-  // If admin user is authenticated and trying to access admin login/signup, redirect to dashboard
-  if (user && isAdmin && (request.nextUrl.pathname === '/login' || request.nextUrl.pathname === '/signup')) {
-    const url = request.nextUrl.clone()
-    url.pathname = '/dashboard'
-    return NextResponse.redirect(url)
-  }
-
-  // If regular user is on login page, redirect to enroll
-  if (user && !isAdmin && (request.nextUrl.pathname === '/login' || request.nextUrl.pathname === '/signup')) {
-    const url = request.nextUrl.clone()
-    url.pathname = '/enroll/wizard'
+    url.pathname = isAdmin ? '/dashboard' : '/enroll/wizard'
     return NextResponse.redirect(url)
   }
 
