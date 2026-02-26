@@ -1,0 +1,12 @@
+# Lightweight test-only image — no Next.js dev server, just vitest.
+FROM node:22-alpine
+
+WORKDIR /app
+
+COPY package.json package-lock.json* ./
+RUN npm install
+
+COPY . .
+
+# Default command: run unit tests and exit
+CMD ["npm", "run", "test"]

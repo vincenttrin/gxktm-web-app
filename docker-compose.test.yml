@@ -1,0 +1,36 @@
+# ---------------------------------------------------------------------------
+# docker-compose.test.yml
+#
+# Lightweight compose file that builds both services, runs their test suites,
+# and exits with the correct status code for CI/CD pipelines.
+#
+# Usage:
+#   docker compose -f docker-compose.test.yml up --build --abort-on-container-exit
+# ---------------------------------------------------------------------------
+
+services:
+  # ---- Backend (Pytest) ----
+  backend-test:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.test
+    container_name: gxktm_backend_test
+    environment:
+      # Provide dummy values so the app module can import without errors.
+      # Tests override all real dependencies via conftest.py fixtures.
+      - DATABASE_URL=postgresql://fake:fake@localhost:5432/fake
+      - NEXT_PUBLIC_SUPABASE_URL=https://fake.supabase.co
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=fake-anon-key
+      - NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY=fake-service-key
+      - ALLOWED_ORIGINS=http://localhost:3000
+
+  # ---- Frontend (Vitest) ----
+  frontend-test:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.test
+    container_name: gxktm_frontend_test
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+      - NEXT_PUBLIC_SUPABASE_URL=https://fake.supabase.co
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=fake-anon-key
