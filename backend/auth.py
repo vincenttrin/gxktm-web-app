@@ -12,12 +12,15 @@ Roles:
 """
 
 import os
+import logging
 from typing import Optional
 from functools import wraps
 
 from fastapi import HTTPException, Header, Depends, status
 from pydantic import BaseModel
 import httpx
+
+logger = logging.getLogger(__name__)
 
 from config import get_settings
 
@@ -116,9 +119,10 @@ async def verify_supabase_token(authorization: Optional[str] = Header(None)) -> 
             )
             
     except httpx.RequestError as e:
+        logger.error(f"Auth token verification failed: {e}")
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=f"Unable to verify token: {str(e)}",
+            detail="Authentication service unavailable",
         )
 
 

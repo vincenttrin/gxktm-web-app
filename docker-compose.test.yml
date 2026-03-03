@@ -21,7 +21,7 @@ services:
       - DATABASE_URL=postgresql://fake:fake@localhost:5432/fake
       - NEXT_PUBLIC_SUPABASE_URL=https://fake.supabase.co
       - NEXT_PUBLIC_SUPABASE_ANON_KEY=fake-anon-key
-      - NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY=fake-service-key
+      - SUPABASE_SERVICE_ROLE_KEY=fake-service-key
       - ALLOWED_ORIGINS=http://localhost:3000
 
   # ---- Frontend (Vitest) ----

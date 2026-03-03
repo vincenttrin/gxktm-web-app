@@ -7,7 +7,7 @@ This router provides endpoints for:
 - Payment summaries and reports
 - CSV export
 
-All write operations require admin privileges.
+All operations require admin privileges.
 """
 
 from uuid import UUID
@@ -32,7 +32,6 @@ from schemas import (
     PaymentResponse,
     PaymentWithFamily,
     PaginatedPaymentResponse,
-    PaymentSummary,
     PaymentStatusEnum,
     EnrolledFamilyPayment,
     EnrolledFamiliesResponse,
@@ -50,23 +49,21 @@ router = APIRouter(prefix="/api/payments", tags=["payments"])
 async def get_payments(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
-    school_year: Optional[str] = Query(None, description="Legacy: Filter by school year string"),
-    school_year_id: Optional[int] = Query(None, description="Filter by school year ID"),
+    school_year: Optional[str] = Query(None, description="Filter by school year string"),
     payment_status: Optional[PaymentStatusEnum] = Query(None),
     search: Optional[str] = Query(None),
     sort_by: Optional[str] = Query("created_at"),
     sort_order: Optional[str] = Query("desc"),
     db: AsyncSession = Depends(get_db),
+    user: UserInfo = Depends(require_admin),
 ):
     """Get all payments with pagination, filtering, and sorting."""
     
     # Base query with family info
     query = select(Payment).options(selectinload(Payment.family))
     
-    # Apply filters - prefer school_year_id over legacy school_year string
-    if school_year_id:
-        query = query.where(Payment.school_year_id == school_year_id)
-    elif school_year:
+    # Apply filters
+    if school_year:
         query = query.where(Payment.school_year == school_year)
     
     if payment_status:
@@ -79,17 +76,18 @@ async def get_payments(
             Family.family_name.ilike(search_pattern)
         )
     
-    # Apply sorting
-    sort_column = getattr(Payment, sort_by, Payment.created_at)
+    # Apply sorting (whitelist to prevent injection)
+    ALLOWED_SORT_FIELDS = {"created_at", "payment_date", "payment_status", "amount_paid", "amount_due", "school_year"}
+    if sort_by not in ALLOWED_SORT_FIELDS:
+        sort_by = "created_at"
+    sort_column = getattr(Payment, sort_by)
     if sort_order == "desc":
         sort_column = sort_column.desc()
     query = query.order_by(sort_column)
     
     # Get total count
     count_query = select(func.count()).select_from(Payment)
-    if school_year_id:
-        count_query = count_query.where(Payment.school_year_id == school_year_id)
-    elif school_year:
+    if school_year:
         count_query = count_query.where(Payment.school_year == school_year)
     if payment_status:
         count_query = count_query.where(Payment.payment_status == payment_status.value)
@@ -138,47 +136,13 @@ async def get_payments(
     )
 
 
-@router.get("/summary", response_model=PaymentSummary)
-async def get_payment_summary(
-    school_year: Optional[str] = Query(None),
-    db: AsyncSession = Depends(get_db),
-):
-    """Get payment summary statistics for a school year."""
-    
-    base_query = select(Payment)
-    if school_year:
-        base_query = base_query.where(Payment.school_year == school_year)
-    
-    result = await db.execute(base_query)
-    payments = result.scalars().all()
-    
-    # Also count families that don't have payments yet
-    family_count_result = await db.execute(select(func.count()).select_from(Family))
-    total_families = family_count_result.scalar() or 0
-    
-    paid_count = sum(1 for p in payments if p.payment_status == PaymentStatus.PAID.value)
-    partial_count = sum(1 for p in payments if p.payment_status == PaymentStatus.PARTIAL.value)
-    unpaid_count = total_families - paid_count - partial_count
-    
-    total_amount_due = sum(float(p.amount_due or 0) for p in payments)
-    total_amount_paid = sum(float(p.amount_paid or 0) for p in payments)
-    
-    return PaymentSummary(
-        total_families=total_families,
-        paid_count=paid_count,
-        partial_count=partial_count,
-        unpaid_count=unpaid_count,
-        total_amount_due=total_amount_due,
-        total_amount_paid=total_amount_paid,
-    )
-
-
 # --- Enrolled Families (for payment tracking) ---
 
 @router.get("/enrolled-families", response_model=EnrolledFamiliesResponse)
 async def get_enrolled_families(
     academic_year_id: Optional[int] = Query(None, description="Filter by academic year ID"),
     db: AsyncSession = Depends(get_db),
+    user: UserInfo = Depends(require_admin),
 ):
     """
     Get all families that have students enrolled in classes for the current/newest school year.
@@ -299,14 +263,20 @@ async def get_enrolled_families(
             None
         )
         
+        # Calculate amount_due: use existing payment amount_due, or calculate from enrollment
+        calculated_amount_due = enrolled_count * 80.0
+        amount_due = float(payment.amount_due) if payment and payment.amount_due else calculated_amount_due
+
         enrolled_family_items.append(EnrolledFamilyPayment(
             id=family.id,
             family_name=family.family_name,
+            diocese_id=family.diocese_id,
             guardians=[{"name": g.name} for g in family.guardians],
             students=students_with_status,
             enrolled_count=enrolled_count,
+            payment_id=payment.id if payment else None,
             payment_status=payment.payment_status if payment else "unpaid",
-            amount_due=float(payment.amount_due) if payment and payment.amount_due else None,
+            amount_due=amount_due,
             amount_paid=float(payment.amount_paid) if payment and payment.amount_paid else 0,
             payment_date=payment.payment_date if payment else None,
             payment_method=payment.payment_method if payment else None,
@@ -326,6 +296,7 @@ async def get_enrolled_families(
 @router.get("/enrolled-families/summary", response_model=EnrolledFamiliesSummary)
 async def get_enrolled_families_summary(
     db: AsyncSession = Depends(get_db),
+    user: UserInfo = Depends(require_admin),
 ):
     """Get summary statistics for enrolled families payment tracking."""
     from sqlalchemy import desc
@@ -342,7 +313,7 @@ async def get_enrolled_families_summary(
         raise HTTPException(status_code=404, detail="No school year configured")
     
     # Get enrolled families data - pass academic_year_id explicitly
-    enrolled_data = await get_enrolled_families(academic_year_id=current_year.id, db=db)
+    enrolled_data = await get_enrolled_families(academic_year_id=current_year.id, db=db, user=user)
     
     # Calculate summary
     paid_count = sum(1 for f in enrolled_data.items if f.payment_status == "paid")
@@ -411,6 +382,7 @@ async def create_payment(
 async def get_payment(
     payment_id: UUID,
     db: AsyncSession = Depends(get_db),
+    user: UserInfo = Depends(require_admin),
 ):
     """Get a specific payment by ID."""
     result = await db.execute(
@@ -440,10 +412,12 @@ async def update_payment(
     if not payment:
         raise HTTPException(status_code=404, detail="Payment not found")
     
+    UPDATABLE_FIELDS = {"amount_due", "amount_paid", "payment_method", "payment_date", "notes"}
     update_data = payment_data.model_dump(exclude_unset=True)
-    
+
     for field, value in update_data.items():
-        setattr(payment, field, value)
+        if field in UPDATABLE_FIELDS:
+            setattr(payment, field, value)
     
     # Recalculate status if amounts changed
     if "amount_paid" in update_data or "amount_due" in update_data:
@@ -552,6 +526,7 @@ async def export_payments_csv(
     school_year: Optional[str] = Query(None),
     payment_status: Optional[PaymentStatusEnum] = Query(None),
     db: AsyncSession = Depends(get_db),
+    user: UserInfo = Depends(require_admin),
 ):
     """Export payments to CSV."""
     

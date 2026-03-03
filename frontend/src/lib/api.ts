@@ -23,7 +23,6 @@ import {
   PaymentUpdate,
   PaymentQueryParams,
   PaginatedPaymentResponse,
-  PaymentSummary,
   FamilyWithPayment,
   FamilyWithPaymentQueryParams,
   PaginatedFamilyWithPaymentResponse,
@@ -95,10 +94,12 @@ async function handleResponse<T>(response: Response): Promise<T> {
 // --- Family API ---
 
 export async function getAllFamilies(): Promise<Family[]> {
+  const headers = await getAuthHeaders();
   const response = await fetch(`${API_BASE_URL}/api/families/all`, {
     cache: 'no-store',
+    headers,
   });
-  
+
   return handleResponse<Family[]>(response);
 }
 
@@ -543,7 +544,7 @@ export function getClassExportUrl(classId: string): string {
 
 export async function getPayments(params: PaymentQueryParams = {}): Promise<PaginatedPaymentResponse> {
   const searchParams = new URLSearchParams();
-  
+
   if (params.page) searchParams.set('page', params.page.toString());
   if (params.page_size) searchParams.set('page_size', params.page_size.toString());
   if (params.school_year) searchParams.set('school_year', params.school_year);
@@ -551,32 +552,23 @@ export async function getPayments(params: PaymentQueryParams = {}): Promise<Pagi
   if (params.search) searchParams.set('search', params.search);
   if (params.sort_by) searchParams.set('sort_by', params.sort_by);
   if (params.sort_order) searchParams.set('sort_order', params.sort_order);
-  
+
+  const headers = await getAuthHeaders();
   const response = await fetch(
     `${API_BASE_URL}/api/payments?${searchParams.toString()}`,
-    { cache: 'no-store' }
+    { cache: 'no-store', headers }
   );
-  
+
   return handleResponse<PaginatedPaymentResponse>(response);
 }
 
-export async function getPaymentSummary(schoolYear?: string): Promise<PaymentSummary> {
-  const searchParams = new URLSearchParams();
-  if (schoolYear) searchParams.set('school_year', schoolYear);
-  
-  const response = await fetch(
-    `${API_BASE_URL}/api/payments/summary?${searchParams.toString()}`,
-    { cache: 'no-store' }
-  );
-  
-  return handleResponse<PaymentSummary>(response);
-}
-
 export async function getPayment(paymentId: string): Promise<Payment> {
+  const headers = await getAuthHeaders();
   const response = await fetch(`${API_BASE_URL}/api/payments/${paymentId}`, {
     cache: 'no-store',
+    headers,
   });
-  
+
   return handleResponse<Payment>(response);
 }
 
@@ -621,7 +613,7 @@ export async function markFamilyAsPaid(
 ): Promise<Payment> {
   const searchParams = new URLSearchParams();
   searchParams.set('school_year', schoolYear);
-  if (amountPaid !== undefined) searchParams.set('amount_paid', amountPaid.toString());
+  if (amountPaid !== undefined) searchParams.set('amount', amountPaid.toString());
   if (paymentMethod) searchParams.set('payment_method', paymentMethod);
   if (notes) searchParams.set('notes', notes);
   
@@ -642,10 +634,12 @@ export function getPaymentsExportUrl(schoolYear?: string, paymentStatus?: string
 }
 
 export async function getFamilyPayments(familyId: string): Promise<Payment[]> {
+  const headers = await getAuthHeaders();
   const response = await fetch(`${API_BASE_URL}/api/families/${familyId}/payments`, {
     cache: 'no-store',
+    headers,
   });
-  
+
   return handleResponse<Payment[]>(response);
 }
 
@@ -657,20 +651,22 @@ import type {
 } from '@/types/family';
 
 export async function getEnrolledFamilies(): Promise<EnrolledFamiliesResponse> {
+  const headers = await getAuthHeaders();
   const response = await fetch(
     `${API_BASE_URL}/api/payments/enrolled-families`,
-    { cache: 'no-store' }
+    { cache: 'no-store', headers }
   );
-  
+
   return handleResponse<EnrolledFamiliesResponse>(response);
 }
 
 export async function getEnrolledFamiliesSummary(): Promise<EnrolledFamiliesSummary> {
+  const headers = await getAuthHeaders();
   const response = await fetch(
     `${API_BASE_URL}/api/payments/enrolled-families/summary`,
-    { cache: 'no-store' }
+    { cache: 'no-store', headers }
   );
-  
+
   return handleResponse<EnrolledFamiliesSummary>(response);
 }
 

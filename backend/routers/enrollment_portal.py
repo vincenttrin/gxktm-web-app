@@ -9,6 +9,7 @@ This router provides endpoints for:
 - Grade progression logic
 """
 
+import logging
 from uuid import UUID, uuid4
 from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -16,6 +17,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, desc
 from sqlalchemy.orm import selectinload
 import re
+
+logger = logging.getLogger(__name__)
 
 from database import get_db
 from models import Family, Guardian, Student, Enrollment, Class, AcademicYear, Program, EmergencyContact
@@ -688,7 +691,8 @@ async def submit_enrollment(
         raise
     except Exception as e:
         await db.rollback()
+        logger.error(f"Enrollment submission failed: {e}")
         raise HTTPException(
             status_code=500,
-            detail=f"Failed to submit enrollment: {str(e)}"
+            detail="Failed to submit enrollment. Please try again or contact administration."
         )

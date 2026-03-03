@@ -87,7 +87,7 @@ export function ReviewStep() {
   
   // Helper to get class selection summary for a child
   const getEnrollmentSummary = (studentId: string | undefined) => {
-    if (!studentId) return { gioaLy: null, vietNgu: null };
+    if (!studentId) return { giaoLy: null, vietNgu: null };
     const selection = classSelections.find(s => s.student_id === studentId);
     if (!selection) return { giaoLy: null, vietNgu: null };
     

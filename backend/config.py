@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     # Supabase Configuration
     supabase_url: str = os.getenv("NEXT_PUBLIC_SUPABASE_URL", "")
     supabase_anon_key: str = os.getenv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "")
-    supabase_service_role_key: str = os.getenv("NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY", "")
+    supabase_service_role_key: str = os.getenv("SUPABASE_SERVICE_ROLE_KEY", os.getenv("NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY", ""))
     
     # Database Configuration
     database_url: str = os.getenv("DATABASE_URL", "")

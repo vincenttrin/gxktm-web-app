@@ -481,7 +481,7 @@ export default function FamilyDetailModal({
         {/* Backdrop */}
         <div
           className="fixed inset-0 bg-black/50 transition-opacity"
-          onClick={onClose}
+          onClick={() => { if (!isLoading) onClose(); }}
         />
 
         {/* Modal */}
@@ -497,8 +497,9 @@ export default function FamilyDetailModal({
               </p>
             </div>
             <button
-              onClick={onClose}
-              className="p-2 text-gray-400 hover:text-gray-600 hover:bg-white/50 rounded-lg transition-colors"
+              onClick={() => { if (!isLoading) onClose(); }}
+              disabled={isLoading}
+              className="p-2 text-gray-400 hover:text-gray-600 hover:bg-white/50 rounded-lg transition-colors disabled:opacity-50"
             >
               <X className="h-5 w-5" />
             </button>
@@ -1576,8 +1577,9 @@ export default function FamilyDetailModal({
           {/* Footer */}
           <div className="flex items-center justify-end px-6 py-4 border-t border-gray-200 bg-gray-50">
             <button
-              onClick={onClose}
-              className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+              onClick={() => { if (!isLoading) onClose(); }}
+              disabled={isLoading}
+              className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-medium disabled:opacity-50"
             >
               Close
             </button>

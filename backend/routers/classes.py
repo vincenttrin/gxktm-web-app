@@ -191,11 +191,13 @@ async def update_class(
         if not year_result.scalar_one_or_none():
             raise HTTPException(status_code=400, detail="Academic year not found")
     
+    UPDATABLE_FIELDS = {"name", "program_id", "academic_year_id"}
     for field, value in update_data.items():
-        setattr(cls, field, value)
-    
+        if field in UPDATABLE_FIELDS:
+            setattr(cls, field, value)
+
     await db.commit()
-    
+
     # Reload with program
     result = await db.execute(
         select(Class).options(selectinload(Class.program)).where(Class.id == class_id)
@@ -295,8 +297,8 @@ async def unenroll_student(
 # --- Export Functionality ---
 
 @router.get("/{class_id}/export/csv")
-async def export_class_csv(class_id: UUID, db: AsyncSession = Depends(get_db)):
-    """Export class roster as CSV file."""
+async def export_class_csv(class_id: UUID, db: AsyncSession = Depends(get_db), user: UserInfo = Depends(require_admin)):
+    """Export class roster as CSV file. (Admin only)"""
     # Get class with enrollments
     result = await db.execute(
         select(Class)

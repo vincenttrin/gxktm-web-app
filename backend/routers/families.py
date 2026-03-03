@@ -66,12 +66,15 @@ async def get_families(
             )
         )
     
-    # Apply sorting
-    sort_column = getattr(Family, sort_by, Family.family_name)
+    # Apply sorting (whitelist to prevent injection)
+    ALLOWED_SORT_FIELDS = {"family_name", "created_at", "city", "state"}
+    if sort_by not in ALLOWED_SORT_FIELDS:
+        sort_by = "family_name"
+    sort_column = getattr(Family, sort_by)
     if sort_order == "desc":
         sort_column = sort_column.desc()
     query = query.order_by(sort_column)
-    
+
     # Get total count
     count_query = select(func.count()).select_from(Family)
     if search:
@@ -109,6 +112,7 @@ async def get_families(
 @router.get("/all", response_model=list[FamilyResponse])
 async def get_all_families(
     db: AsyncSession = Depends(get_db),
+    user: UserInfo = Depends(require_admin),
 ):
     """Get all families without pagination for client-side caching.
     This endpoint returns all families with their related data in a single request,
@@ -158,8 +162,11 @@ async def get_families_with_payments(
             )
         )
     
-    # Apply sorting
-    sort_column = getattr(Family, sort_by, Family.family_name)
+    # Apply sorting (whitelist to prevent injection)
+    ALLOWED_SORT_FIELDS = {"family_name", "created_at", "city", "state"}
+    if sort_by not in ALLOWED_SORT_FIELDS:
+        sort_by = "family_name"
+    sort_column = getattr(Family, sort_by)
     if sort_order == "desc":
         sort_column = sort_column.desc()
     query = query.order_by(sort_column)
@@ -354,10 +361,12 @@ async def update_family(
     if not family:
         raise HTTPException(status_code=404, detail="Family not found")
     
-    # Update fields if provided
+    # Update only whitelisted fields
+    UPDATABLE_FIELDS = {"family_name", "address", "city", "state", "zip_code", "diocese_id"}
     update_data = family_data.model_dump(exclude_unset=True)
     for field, value in update_data.items():
-        setattr(family, field, value)
+        if field in UPDATABLE_FIELDS:
+            setattr(family, field, value)
     
     await db.commit()
     
@@ -437,10 +446,12 @@ async def update_guardian(
     if not guardian:
         raise HTTPException(status_code=404, detail="Guardian not found")
     
+    UPDATABLE_FIELDS = {"name", "email", "phone", "relationship_to_family"}
     update_data = guardian_data.model_dump(exclude_unset=True)
     for field, value in update_data.items():
-        setattr(guardian, field, value)
-    
+        if field in UPDATABLE_FIELDS:
+            setattr(guardian, field, value)
+
     await db.commit()
     await db.refresh(guardian)
     return guardian
@@ -517,10 +528,12 @@ async def update_student(
     if not student:
         raise HTTPException(status_code=404, detail="Student not found")
     
+    UPDATABLE_FIELDS = {"first_name", "last_name", "middle_name", "saint_name", "date_of_birth", "gender", "grade_level", "american_school", "notes"}
     update_data = student_data.model_dump(exclude_unset=True)
     for field, value in update_data.items():
-        setattr(student, field, value)
-    
+        if field in UPDATABLE_FIELDS:
+            setattr(student, field, value)
+
     await db.commit()
     await db.refresh(student)
     return student
@@ -601,10 +614,12 @@ async def update_emergency_contact(
     if not contact:
         raise HTTPException(status_code=404, detail="Emergency contact not found")
     
+    UPDATABLE_FIELDS = {"name", "email", "phone", "relationship_to_family"}
     update_data = contact_data.model_dump(exclude_unset=True)
     for field, value in update_data.items():
-        setattr(contact, field, value)
-    
+        if field in UPDATABLE_FIELDS:
+            setattr(contact, field, value)
+
     await db.commit()
     await db.refresh(contact)
     return contact

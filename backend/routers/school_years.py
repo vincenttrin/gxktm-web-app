@@ -414,9 +414,11 @@ async def update_school_year(
         for active_year in active_years_result.scalars():
             active_year.is_active = False
     
-    # Update the year
+    # Update only whitelisted fields
+    UPDATABLE_FIELDS = {"name", "start_year", "end_year", "is_active", "is_current", "enrollment_open", "transition_date"}
     for field, value in update_data.items():
-        setattr(year, field, value)
+        if field in UPDATABLE_FIELDS:
+            setattr(year, field, value)
     
     # Keep is_current in sync with is_active for backward compatibility
     if "is_active" in update_data:

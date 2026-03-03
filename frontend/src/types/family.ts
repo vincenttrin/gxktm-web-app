@@ -416,9 +416,11 @@ export interface EnrolledFamilyStudent {
 export interface EnrolledFamilyPayment {
   id: string;
   family_name: string | null;
+  diocese_id: string | null;
   guardians: EnrolledFamilyGuardian[];
   students: StudentWithEnrollmentStatus[];
   enrolled_count: number;
+  payment_id: string | null;
   payment_status: PaymentStatus;
   amount_due: number | null;
   amount_paid: number;

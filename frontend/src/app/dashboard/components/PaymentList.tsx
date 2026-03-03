@@ -17,7 +17,8 @@ import {
 import {
   getEnrolledFamilies,
   getEnrolledFamiliesSummary,
-  markFamilyAsPaid,
+  createPayment,
+  updatePayment,
   getClasses,
   manualEnrollStudent,
 } from '@/lib/api';
@@ -54,7 +55,8 @@ export default function PaymentList() {
   // Modal states
   const [selectedFamily, setSelectedFamily] = useState<EnrolledFamilyPayment | null>(null);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
-  const [paymentAmount, setPaymentAmount] = useState<string>('');
+  const [paymentAmountDue, setPaymentAmountDue] = useState<string>('');
+  const [paymentAmountPaid, setPaymentAmountPaid] = useState<string>('');
   const [paymentMethod, setPaymentMethod] = useState<string>('cash');
   const [isSubmittingPayment, setIsSubmittingPayment] = useState(false);
   const [toast, setToast] = useState<ToastState | null>(null);
@@ -170,29 +172,42 @@ export default function PaymentList() {
 
   const handlePaymentClick = (family: EnrolledFamilyPayment) => {
     setSelectedFamily(family);
-    setPaymentAmount(family.amount_due?.toString() || family.amount_paid?.toString() || '');
+    setPaymentAmountDue(family.amount_due?.toString() || (family.enrolled_count * 80).toString());
+    setPaymentAmountPaid(family.amount_paid?.toString() || '');
     setPaymentMethod('cash');
     setIsPaymentModalOpen(true);
   };
 
   const handlePaymentSubmit = async () => {
-    if (!selectedFamily || !paymentAmount) return;
+    if (!selectedFamily || !paymentAmountPaid) return;
 
     setIsSubmittingPayment(true);
     try {
-      await markFamilyAsPaid(
-        selectedFamily.id,
-        academicYearName,
-        parseFloat(paymentAmount),
-        paymentMethod
-      );
+      if (selectedFamily.payment_id) {
+        await updatePayment(selectedFamily.payment_id, {
+          amount_due: paymentAmountDue ? parseFloat(paymentAmountDue) : null,
+          amount_paid: parseFloat(paymentAmountPaid),
+          payment_method: paymentMethod,
+          payment_date: new Date().toISOString().split('T')[0],
+        });
+      } else {
+        await createPayment({
+          family_id: selectedFamily.id,
+          school_year: academicYearName,
+          amount_due: paymentAmountDue ? parseFloat(paymentAmountDue) : null,
+          amount_paid: parseFloat(paymentAmountPaid),
+          payment_method: paymentMethod,
+          payment_date: new Date().toISOString().split('T')[0],
+        });
+      }
       showToast('Payment recorded successfully', 'success');
       setIsPaymentModalOpen(false);
       setSelectedFamily(null);
       loadData();
     } catch (error) {
       console.error('Failed to record payment:', error);
-      showToast('Failed to record payment', 'error');
+      const message = error instanceof Error ? error.message : 'Failed to record payment';
+      showToast(message, 'error');
     } finally {
       setIsSubmittingPayment(false);
     }
@@ -396,9 +411,16 @@ export default function PaymentList() {
                         <ChevronRight className="h-5 w-5 text-gray-400" />
                       )}
                       <div>
-                        <h3 className="font-semibold text-gray-900">
-                          {family.family_name || 'Unknown Family'}
-                        </h3>
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-semibold text-gray-900">
+                            {family.family_name || 'Unknown Family'}
+                          </h3>
+                          {family.diocese_id && family.diocese_id.toLowerCase().includes('x') && (
+                            <span className="px-2 py-0.5 text-xs font-medium bg-purple-100 text-purple-700 rounded-full">
+                              External Diocese
+                            </span>
+                          )}
+                        </div>
                         <p className="text-sm text-gray-500">
                           {family.guardians.map((g) => g.name).join(', ') || 'No guardians'}
                         </p>
@@ -432,6 +454,11 @@ export default function PaymentList() {
                 {/* Expanded Content - Students */}
                 {isExpanded && (
                   <div className="border-t px-4 py-4 bg-gray-50">
+                    {family.diocese_id && (
+                      <p className="text-xs text-gray-500 mb-3">
+                        Diocese ID: <span className="font-medium text-gray-700">{family.diocese_id}</span>
+                      </p>
+                    )}
                     <h4 className="text-sm font-medium text-gray-700 mb-3">Children</h4>
                     <div className="space-y-2">
                       {/* Enrolled Students */}
@@ -540,26 +567,56 @@ export default function PaymentList() {
                   {getStatusBadge(selectedFamily.payment_status)}
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Amount
-                  </label>
-                  <div className="relative">
-                    <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                    <input
-                      type="number"
-                      value={paymentAmount}
-                      onChange={(e) => setPaymentAmount(e.target.value)}
-                      placeholder="0.00"
-                      className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-gray-700"
-                    />
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Amount Due
+                    </label>
+                    <div className="relative">
+                      <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={paymentAmountDue}
+                        onChange={(e) => setPaymentAmountDue(e.target.value)}
+                        placeholder="0.00"
+                        className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-gray-700"
+                      />
+                    </div>
                   </div>
-                  {selectedFamily.amount_due && (
-                    <p className="text-xs text-gray-500 mt-1">
-                      Amount due: {formatCurrency(selectedFamily.amount_due)}
-                    </p>
-                  )}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Amount Paid
+                    </label>
+                    <div className="relative">
+                      <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={paymentAmountPaid}
+                        onChange={(e) => setPaymentAmountPaid(e.target.value)}
+                        placeholder="0.00"
+                        className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-gray-700"
+                      />
+                    </div>
+                  </div>
                 </div>
+
+                {paymentAmountDue && (
+                  <div className="text-sm font-medium">
+                    Balance:{' '}
+                    <span className={
+                      (() => {
+                        const balance = parseFloat(paymentAmountDue) - parseFloat(paymentAmountPaid || '0');
+                        if (balance <= 0) return 'text-green-600';
+                        if (balance < parseFloat(paymentAmountDue)) return 'text-yellow-600';
+                        return 'text-red-600';
+                      })()
+                    }>
+                      {formatCurrency(parseFloat(paymentAmountDue) - parseFloat(paymentAmountPaid || '0'))}
+                    </span>
+                  </div>
+                )}
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -572,8 +629,9 @@ export default function PaymentList() {
                   >
                     <option value="cash">Cash</option>
                     <option value="check">Check</option>
-                    <option value="card">Card</option>
-                    <option value="transfer">Bank Transfer</option>
+                    <option value="zelle">Zelle</option>
+                    <option value="venmo">Venmo</option>
+                    <option value="credit_card">Credit Card</option>
                     <option value="other">Other</option>
                   </select>
                 </div>
@@ -592,7 +650,7 @@ export default function PaymentList() {
                 </button>
                 <button
                   onClick={handlePaymentSubmit}
-                  disabled={!paymentAmount || isSubmittingPayment}
+                  disabled={!paymentAmountPaid || isSubmittingPayment}
                   className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
                 >
                   {isSubmittingPayment ? (

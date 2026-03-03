@@ -535,9 +535,11 @@ class EnrolledFamilyPayment(BaseModel):
     """Family with enrollment and payment info for payment tracking."""
     id: UUID
     family_name: Optional[str] = None
+    diocese_id: Optional[str] = None
     guardians: List[GuardianSimple] = []
     students: List[StudentWithEnrollmentStatus] = []  # Updated to include enrollment status
     enrolled_count: int = 0  # Number of students enrolled
+    payment_id: Optional[UUID] = None  # Existing payment record ID, if any
     payment_status: str = "unpaid"  # unpaid, partial, paid
     amount_due: Optional[float] = None
     amount_paid: float = 0
