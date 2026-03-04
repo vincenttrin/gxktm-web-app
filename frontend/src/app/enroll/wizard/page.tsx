@@ -231,7 +231,7 @@ export default function EnrollmentWizardPage() {
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
           <p className="text-center text-xs text-gray-500">
             © 2025 GXKTM. All rights reserved. Need help?{' '}
-            <a href="mailto:support@gxktm.org" className="text-blue-600 hover:underline">
+            <a href={`mailto:${process.env.NEXT_PUBLIC_CONTACT_EMAIL || 'giaoxukinhthanh@gmail.com'}`} className="text-blue-600 hover:underline">
               Contact Support
             </a>
           </p>

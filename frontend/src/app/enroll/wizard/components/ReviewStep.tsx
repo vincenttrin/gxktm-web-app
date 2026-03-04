@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { useEnrollment } from '../EnrollmentContext';
 import { submitEnrollment, EnrollmentSubmissionRequest } from '@/lib/enrollmentApi';
 
@@ -7,8 +8,10 @@ export function ReviewStep() {
   const { state, setStep, goToPreviousStep, setSubmitting, setError } = useEnrollment();
   const { formState, academicYear, isLoading, isSubmitting } = state;
   const { family, guardians, children, emergencyContacts, classSelections } = formState;
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   
   const handleSubmit = async () => {
+    setShowConfirmDialog(false);
     if (!academicYear) {
       setError('No academic year configured. Please contact administration.');
       return;
@@ -330,7 +333,7 @@ export function ReviewStep() {
         </button>
         
         <button
-          onClick={handleSubmit}
+          onClick={() => setShowConfirmDialog(true)}
           disabled={isLoading || isSubmitting}
           className="inline-flex items-center gap-2 rounded-lg bg-green-600 px-8 py-3 text-sm font-medium text-white shadow-sm hover:bg-green-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
         >
@@ -352,6 +355,47 @@ export function ReviewStep() {
           )}
         </button>
       </div>
+      
+      {/* Confirmation Dialog */}
+      {showConfirmDialog && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
+                <svg className="h-5 w-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900">Confirm Submission</h3>
+            </div>
+            <p className="text-sm text-gray-600 mb-2">
+              Are you sure you want to submit your enrollment for the {academicYear?.name || 'current'} academic year?
+            </p>
+            <p className="text-sm text-gray-500 mb-6">
+              {state.isExistingFamily 
+                ? 'This will update your existing enrollment and replace any previous submission for this year.'
+                : 'This will create a new enrollment for your family.'}
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setShowConfirmDialog(false)}
+                className="inline-flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSubmit}
+                className="inline-flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-green-500 transition-all"
+              >
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+                Confirm & Submit
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

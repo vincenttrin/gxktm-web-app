@@ -13,8 +13,26 @@ import {
   EnrollmentFamily,
   Program,
 } from '@/types/enrollment';
+import { createClient } from '@/utils/supabase/client';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+
+/**
+ * Get the current Supabase session token for authenticated API calls.
+ * Returns the Bearer token header object, or empty object if no session.
+ */
+async function getAuthHeaders(): Promise<Record<string, string>> {
+  try {
+    const supabase = createClient();
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.access_token) {
+      return { Authorization: `Bearer ${session.access_token}` };
+    }
+  } catch (error) {
+    console.error('Failed to get auth session:', error);
+  }
+  return {};
+}
 
 class EnrollmentApiError extends Error {
   status: number;
@@ -48,12 +66,14 @@ async function handleResponse<T>(response: Response): Promise<T> {
  * Used after magic link authentication to determine if user is existing or new family.
  */
 export async function lookupFamilyByEmail(email: string): Promise<FamilyLookupResponse> {
+  const authHeaders = await getAuthHeaders();
   const response = await fetch(
     `${API_BASE_URL}/api/enrollment/lookup?email=${encodeURIComponent(email)}`,
     {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
+        ...authHeaders,
       },
     }
   );
@@ -66,12 +86,14 @@ export async function lookupFamilyByEmail(email: string): Promise<FamilyLookupRe
  * Includes guardians, students, and emergency contacts.
  */
 export async function getFamilyForEnrollment(familyId: string): Promise<EnrollmentFamily> {
+  const authHeaders = await getAuthHeaders();
   const response = await fetch(
     `${API_BASE_URL}/api/enrollment/family/${familyId}`,
     {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
+        ...authHeaders,
       },
     }
   );
@@ -130,12 +152,14 @@ export async function getClassesForEnrollment(
  * Applies automatic grade progression.
  */
 export async function getSuggestedEnrollments(familyId: string): Promise<SuggestedEnrollmentsResponse> {
+  const authHeaders = await getAuthHeaders();
   const response = await fetch(
     `${API_BASE_URL}/api/enrollment/family/${familyId}/suggested-enrollments`,
     {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
+        ...authHeaders,
       },
     }
   );
@@ -228,12 +252,14 @@ export interface EnrollmentSubmissionResponse {
 export async function submitEnrollment(
   request: EnrollmentSubmissionRequest
 ): Promise<EnrollmentSubmissionResponse> {
+  const authHeaders = await getAuthHeaders();
   const response = await fetch(
     `${API_BASE_URL}/api/enrollment/submit`,
     {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        ...authHeaders,
       },
       body: JSON.stringify(request),
     }

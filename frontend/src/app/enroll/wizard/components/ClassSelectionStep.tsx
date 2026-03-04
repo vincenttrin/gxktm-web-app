@@ -40,7 +40,34 @@ export function ClassSelectionStep() {
         let giaoLyCompleted = false;
         let vietNguCompleted = false;
         
-        // Default to level 1 if no previous enrollment found and child has grade_level
+        // First, try to use suggested enrollments (grade progression from last year)
+        const suggestion = suggestedEnrollments.find(s => s.student_id === child.id);
+        if (suggestion && suggestion.suggested_classes.length > 0) {
+          for (const cls of suggestion.suggested_classes) {
+            const programName = cls.program_name?.toLowerCase() || '';
+            const className = cls.class_name.toLowerCase();
+            const isGiaoLy = programName.includes('giao ly') || programName.includes('giáo lý') || className.includes('giao ly') || className.includes('giáo lý');
+            const isVietNgu = programName.includes('viet ngu') || programName.includes('việt ngữ') || className.includes('viet ngu') || className.includes('việt ngữ');
+            const match = cls.class_name.match(/(\d+)/);
+            const level = match ? parseInt(match[1], 10) : null;
+            
+            if (level && isGiaoLy) {
+              if (level > 9) {
+                giaoLyCompleted = true;
+              } else {
+                giaoLyLevel = level;
+              }
+            } else if (level && isVietNgu) {
+              if (level > 9) {
+                vietNguCompleted = true;
+              } else {
+                vietNguLevel = level;
+              }
+            }
+          }
+        }
+        
+        // Fallback: default to grade_level if no suggestion matched
         if (giaoLyLevel === null && !giaoLyCompleted && child.grade_level) {
           giaoLyLevel = Math.min(child.grade_level, 9);
         }

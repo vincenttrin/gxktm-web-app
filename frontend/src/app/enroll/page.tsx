@@ -1,12 +1,37 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { createClient } from '@/utils/supabase/client';
+import { getCurrentAcademicYear } from '@/lib/enrollmentApi';
 
 export default function EnrollmentLandingPage() {
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isCheckingStatus, setIsCheckingStatus] = useState(true);
+  const [enrollmentClosed, setEnrollmentClosed] = useState(false);
+  const [enrollmentClosedMessage, setEnrollmentClosedMessage] = useState('');
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  // Check enrollment status on mount
+  useEffect(() => {
+    async function checkEnrollmentStatus() {
+      try {
+        await getCurrentAcademicYear();
+        // If no error thrown, enrollment is open
+        setEnrollmentClosed(false);
+      } catch (error) {
+        if (error instanceof Error && error.message.includes('closed')) {
+          setEnrollmentClosed(true);
+          setEnrollmentClosedMessage(error.message);
+        }
+        // Other errors (e.g. no year configured) — still show the form,
+        // the wizard will surface the error after auth
+      } finally {
+        setIsCheckingStatus(false);
+      }
+    }
+    checkEnrollmentStatus();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -72,7 +97,46 @@ export default function EnrollmentLandingPage() {
         </p>
       </div>
 
-      {/* Main Card */}
+      {/* Loading State */}
+      {isCheckingStatus && (
+        <div className="w-full max-w-md">
+          <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100 text-center">
+            <div className="mx-auto h-10 w-10 rounded-full border-4 border-blue-200 border-t-blue-600 animate-spin mb-4" />
+            <p className="text-gray-600 text-sm">Checking enrollment status...</p>
+          </div>
+        </div>
+      )}
+
+      {/* Enrollment Closed State */}
+      {!isCheckingStatus && enrollmentClosed && (
+        <div className="w-full max-w-md">
+          <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
+            <div className="text-center">
+              <div className="mx-auto h-16 w-16 rounded-full bg-amber-100 flex items-center justify-center mb-4">
+                <svg className="h-8 w-8 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              <h2 className="text-xl font-semibold text-gray-900 mb-2">Enrollment Closed</h2>
+              <p className="text-sm text-gray-600 mb-6">
+                {enrollmentClosedMessage || 'Enrollment is currently closed. Please check back later or contact us for more information.'}
+              </p>
+              <a
+                href={`mailto:${process.env.NEXT_PUBLIC_CONTACT_EMAIL || 'giaoxukinhthanh@gmail.com'}`}
+                className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-500 transition-all"
+              >
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                Contact Us
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Main Card - only show when enrollment is open */}
+      {!isCheckingStatus && !enrollmentClosed && (
       <div className="w-full max-w-md">
         <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
           <h2 className="text-xl font-semibold text-gray-900 mb-2">
@@ -184,11 +248,12 @@ export default function EnrollmentLandingPage() {
         {/* Footer */}
         <p className="mt-8 text-center text-xs text-gray-500">
           Need help? Contact us at{' '}
-          <a href="mailto:support@gxktm.org" className="text-blue-600 hover:underline">
-            support@gxktm.org
+          <a href={`mailto:${process.env.NEXT_PUBLIC_CONTACT_EMAIL || 'giaoxukinhthanh@gmail.com'}`} className="text-blue-600 hover:underline">
+            {process.env.NEXT_PUBLIC_CONTACT_EMAIL || 'giaoxukinhthanh@gmail.com'}
           </a>
         </p>
       </div>
+      )}
     </div>
   );
 }
