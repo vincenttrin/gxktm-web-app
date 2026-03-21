@@ -68,8 +68,13 @@ export default function PaymentList() {
   const [enrollingStudent, setEnrollingStudent] = useState<EnrollingStudent | null>(null);
   const [availableClasses, setAvailableClasses] = useState<ClassItem[]>([]);
   const [selectedClassIds, setSelectedClassIds] = useState<Set<string>>(new Set());
+  // Single-select programs: map from program name to selected class ID
+  const [singleSelectPrograms, setSingleSelectPrograms] = useState<Map<string, string>>(new Map());
   const [isLoadingClasses, setIsLoadingClasses] = useState(false);
   const [isEnrolling, setIsEnrolling] = useState(false);
+
+  // Programs that only allow 1 enrollment at a time
+  const SINGLE_SELECT_PROGRAMS = ['Giao Ly', 'Viet Ngu'];
 
   const loadData = useCallback(async () => {
     setIsLoading(true);
@@ -119,6 +124,7 @@ export default function PaymentList() {
       familyId,
     });
     setSelectedClassIds(new Set());
+    setSingleSelectPrograms(new Map());
     setIsLoadingClasses(true);
 
     try {
@@ -138,26 +144,55 @@ export default function PaymentList() {
     }
   };
 
-  const handleClassToggle = (classId: string) => {
-    setSelectedClassIds((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(classId)) {
-        newSet.delete(classId);
-      } else {
-        newSet.add(classId);
-      }
-      return newSet;
-    });
+  const isSingleSelectProgram = (programName: string) => {
+    return SINGLE_SELECT_PROGRAMS.some(
+      (p) => programName.toLowerCase().includes(p.toLowerCase())
+    );
   };
 
+  const handleClassToggle = (classId: string, programName: string) => {
+    if (isSingleSelectProgram(programName)) {
+      // Single-select: use radio behavior
+      setSingleSelectPrograms((prev) => {
+        const newMap = new Map(prev);
+        if (newMap.get(programName) === classId) {
+          newMap.delete(programName); // Deselect
+        } else {
+          newMap.set(programName, classId); // Select (replaces previous)
+        }
+        return newMap;
+      });
+    } else {
+      // Multi-select: use checkbox behavior (TNTT, etc.)
+      setSelectedClassIds((prev) => {
+        const newSet = new Set(prev);
+        if (newSet.has(classId)) {
+          newSet.delete(classId);
+        } else {
+          newSet.add(classId);
+        }
+        return newSet;
+      });
+    }
+  };
+
+  // Combine all selected class IDs from both single-select and multi-select
+  const allSelectedClassIds = useMemo(() => {
+    const all = new Set(selectedClassIds);
+    for (const classId of singleSelectPrograms.values()) {
+      all.add(classId);
+    }
+    return all;
+  }, [selectedClassIds, singleSelectPrograms]);
+
   const handleEnrollSubmit = async () => {
-    if (!enrollingStudent || selectedClassIds.size === 0) return;
+    if (!enrollingStudent || allSelectedClassIds.size === 0) return;
 
     setIsEnrolling(true);
     try {
       const result = await manualEnrollStudent({
         student_id: enrollingStudent.id,
-        class_ids: Array.from(selectedClassIds),
+        class_ids: Array.from(allSelectedClassIds),
       });
       showToast(result.message, 'success');
       setEnrollingStudent(null);
@@ -714,52 +749,60 @@ export default function PaymentList() {
                   <div className="space-y-6">
                     {Object.entries(groupedClasses)
                       .sort(([a], [b]) => a.localeCompare(b))
-                      .map(([programName, programClasses]) => (
-                        <div key={programName}>
-                          <h3 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                            <BookOpen className="h-4 w-4" />
-                            {programName}
-                          </h3>
-                          <div className="space-y-2">
-                            {programClasses.map((classItem) => {
-                              const isSelected = selectedClassIds.has(classItem.id);
-                              return (
-                                <button
-                                  key={classItem.id}
-                                  onClick={() => handleClassToggle(classItem.id)}
-                                  className={`w-full flex items-center justify-between p-3 rounded-lg border transition-all ${
-                                    isSelected
-                                      ? 'border-blue-500 bg-blue-50'
-                                      : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                                  }`}
-                                >
-                                  <div className="flex items-center gap-3">
-                                    <div
-                                      className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
-                                        isSelected
-                                          ? 'border-blue-500 bg-blue-500'
-                                          : 'border-gray-300'
-                                      }`}
-                                    >
-                                      {isSelected && (
-                                        <Check className="h-3 w-3 text-white" />
-                                      )}
+                      .map(([programName, programClasses]) => {
+                        const isSingle = isSingleSelectProgram(programName);
+                        return (
+                          <div key={programName}>
+                            <h3 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                              <BookOpen className="h-4 w-4" />
+                              {programName}
+                              {isSingle && (
+                                <span className="text-xs font-normal text-gray-400">(select one)</span>
+                              )}
+                            </h3>
+                            <div className="space-y-2">
+                              {programClasses.map((classItem) => {
+                                const isSelected = isSingle
+                                  ? singleSelectPrograms.get(programName) === classItem.id
+                                  : selectedClassIds.has(classItem.id);
+                                return (
+                                  <button
+                                    key={classItem.id}
+                                    onClick={() => handleClassToggle(classItem.id, programName)}
+                                    className={`w-full flex items-center justify-between p-3 rounded-lg border transition-all ${
+                                      isSelected
+                                        ? 'border-blue-500 bg-blue-50'
+                                        : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                                    }`}
+                                  >
+                                    <div className="flex items-center gap-3">
+                                      <div
+                                        className={`w-5 h-5 ${isSingle ? 'rounded-full' : 'rounded'} border-2 flex items-center justify-center transition-all ${
+                                          isSelected
+                                            ? 'border-blue-500 bg-blue-500'
+                                            : 'border-gray-300'
+                                        }`}
+                                      >
+                                        {isSelected && (
+                                          <Check className="h-3 w-3 text-white" />
+                                        )}
+                                      </div>
+                                      <span className="font-medium text-gray-900">
+                                        {classItem.name}
+                                      </span>
                                     </div>
-                                    <span className="font-medium text-gray-900">
-                                      {classItem.name}
-                                    </span>
-                                  </div>
-                                  {classItem.enrollment_count !== undefined && (
-                                    <span className="text-sm text-gray-500">
-                                      {classItem.enrollment_count} enrolled
-                                    </span>
-                                  )}
-                                </button>
-                              );
-                            })}
+                                    {classItem.enrollment_count !== undefined && (
+                                      <span className="text-sm text-gray-500">
+                                        {classItem.enrollment_count} enrolled
+                                      </span>
+                                    )}
+                                  </button>
+                                );
+                              })}
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                   </div>
                 )}
               </div>
@@ -767,7 +810,7 @@ export default function PaymentList() {
               {/* Footer */}
               <div className="flex items-center justify-between p-6 border-t flex-shrink-0 bg-gray-50">
                 <p className="text-sm text-gray-500">
-                  {selectedClassIds.size} class{selectedClassIds.size !== 1 ? 'es' : ''} selected
+                  {allSelectedClassIds.size} class{allSelectedClassIds.size !== 1 ? 'es' : ''} selected
                 </p>
                 <div className="flex gap-3">
                   <button
@@ -778,7 +821,7 @@ export default function PaymentList() {
                   </button>
                   <button
                     onClick={handleEnrollSubmit}
-                    disabled={selectedClassIds.size === 0 || isEnrolling}
+                    disabled={allSelectedClassIds.size === 0 || isEnrolling}
                     className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
                   >
                     {isEnrolling ? (

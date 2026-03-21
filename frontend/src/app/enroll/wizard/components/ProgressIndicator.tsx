@@ -1,15 +1,27 @@
 'use client';
 
 import { ENROLLMENT_STEPS, EnrollmentStep } from '@/types/enrollment';
+import { useTranslation } from '@/lib/i18n';
+
+const STEP_TITLE_KEYS: Record<string, string> = {
+  'family-info': 'wizard.steps.familyInfo',
+  'guardians': 'wizard.steps.parentsGuardians',
+  'children': 'wizard.steps.children',
+  'emergency-contacts': 'wizard.steps.emergencyContacts',
+  'class-selection': 'wizard.steps.classSelection',
+  'review': 'wizard.steps.review',
+  'confirmation': 'wizard.steps.confirmation',
+};
 
 interface ProgressIndicatorProps {
   currentStep: EnrollmentStep;
 }
 
 export function ProgressIndicator({ currentStep }: ProgressIndicatorProps) {
+  const { t } = useTranslation();
   // Use all wizard steps (confirmation is the last step)
   const wizardSteps = ENROLLMENT_STEPS.filter(step => step.id !== 'confirmation');
-  
+
   const currentStepIndex = wizardSteps.findIndex(step => step.id === currentStep);
   
   return (
@@ -17,10 +29,10 @@ export function ProgressIndicator({ currentStep }: ProgressIndicatorProps) {
       {/* Mobile: Simple step indicator */}
       <div className="flex items-center justify-center gap-2 sm:hidden mb-6">
         <span className="text-sm font-medium text-gray-900">
-          Step {currentStepIndex + 1} of {wizardSteps.length}
+          {t('wizard.stepOf', { current: currentStepIndex + 1, total: wizardSteps.length })}
         </span>
         <span className="text-sm text-gray-500">
-          - {wizardSteps[currentStepIndex]?.title}
+          - {t(STEP_TITLE_KEYS[wizardSteps[currentStepIndex]?.id] || wizardSteps[currentStepIndex]?.title)}
         </span>
       </div>
       
@@ -85,7 +97,7 @@ export function ProgressIndicator({ currentStep }: ProgressIndicatorProps) {
                             : 'text-gray-400'
                         }`}
                       >
-                        {step.title}
+                        {t(STEP_TITLE_KEYS[step.id] || step.title)}
                       </span>
                     </div>
                   </div>

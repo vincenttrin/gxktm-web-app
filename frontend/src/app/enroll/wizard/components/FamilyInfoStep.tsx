@@ -4,9 +4,11 @@ import { useState } from 'react';
 import { useEnrollment } from '../EnrollmentContext';
 import { WizardNavigation } from './WizardNavigation';
 import { EnrollmentFamily } from '@/types/enrollment';
+import { useTranslation } from '@/lib/i18n';
 
 export function FamilyInfoStep() {
   const { state, updateFormFamily, goToNextStep } = useEnrollment();
+  const { t } = useTranslation();
   const { formState, isLoading } = state;
   const family = formState.family;
   
@@ -45,11 +47,11 @@ export function FamilyInfoStep() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Family Information</h2>
+          <h2 className="text-2xl font-bold text-gray-900">{t('wizard.familyInfo.title')}</h2>
           <p className="mt-1 text-sm text-gray-600">
             {state.isExistingFamily
-              ? 'Review and update your family information below.'
-              : 'Please enter your family information to get started.'}
+              ? t('wizard.familyInfo.descriptionExisting')
+              : t('wizard.familyInfo.descriptionNew')}
           </p>
         </div>
         {state.isExistingFamily && !isEditing && (
@@ -60,7 +62,7 @@ export function FamilyInfoStep() {
             <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
             </svg>
-            Edit
+            {t('common.edit')}
           </button>
         )}
       </div>
@@ -71,7 +73,7 @@ export function FamilyInfoStep() {
           <svg className="h-5 w-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
           </svg>
-          Family Details
+          {t('wizard.familyInfo.familyDetails')}
         </h3>
         
         {isEditing ? (
@@ -79,7 +81,7 @@ export function FamilyInfoStep() {
             {/* Family Name */}
             <div>
               <label htmlFor="family_name" className="block text-sm font-medium text-gray-700 mb-1">
-                Family Name <span className="text-red-500">*</span>
+                {t('wizard.familyInfo.familyName')} <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
@@ -94,7 +96,7 @@ export function FamilyInfoStep() {
             {/* Address */}
             <div>
               <label htmlFor="address" className="block text-sm font-medium text-gray-700 mb-1">
-                Street Address
+                {t('wizard.familyInfo.streetAddress')}
               </label>
               <input
                 type="text"
@@ -110,7 +112,7 @@ export function FamilyInfoStep() {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="sm:col-span-1">
                 <label htmlFor="city" className="block text-sm font-medium text-gray-700 mb-1">
-                  City
+                  {t('wizard.familyInfo.city')}
                 </label>
                 <input
                   type="text"
@@ -123,7 +125,7 @@ export function FamilyInfoStep() {
               </div>
               <div>
                 <label htmlFor="state" className="block text-sm font-medium text-gray-700 mb-1">
-                  State
+                  {t('wizard.familyInfo.state')}
                 </label>
                 <input
                   type="text"
@@ -137,7 +139,7 @@ export function FamilyInfoStep() {
               </div>
               <div>
                 <label htmlFor="zip_code" className="block text-sm font-medium text-gray-700 mb-1">
-                  ZIP Code
+                  {t('wizard.familyInfo.zipCode')}
                 </label>
                 <input
                   type="text"
@@ -153,7 +155,7 @@ export function FamilyInfoStep() {
             {/* Diocese ID */}
             <div>
               <label htmlFor="diocese_id" className="block text-sm font-medium text-gray-700 mb-1">
-                Diocese ID <span className="text-gray-400 text-xs">(Optional)</span>
+                {t('wizard.familyInfo.dioceseId')} <span className="text-gray-400 text-xs">({t('common.optional')})</span>
               </label>
               <input
                 type="text"
@@ -174,14 +176,14 @@ export function FamilyInfoStep() {
                 <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
-                Save Changes
+                {t('common.saveChanges')}
               </button>
               {state.isExistingFamily && (
                 <button
                   onClick={handleCancel}
                   className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all"
                 >
-                  Cancel
+                  {t('common.cancel')}
                 </button>
               )}
             </div>
@@ -189,11 +191,11 @@ export function FamilyInfoStep() {
         ) : (
           <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">Family Name</dt>
-              <dd className="mt-1 text-sm text-gray-900">{family.family_name || 'Not provided'}</dd>
+              <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">{t('wizard.familyInfo.familyName')}</dt>
+              <dd className="mt-1 text-sm text-gray-900">{family.family_name || t('common.notProvided')}</dd>
             </div>
             <div>
-              <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">Address</dt>
+              <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">{t('wizard.familyInfo.address')}</dt>
               <dd className="mt-1 text-sm text-gray-900">
                 {family.address ? (
                   <>
@@ -203,13 +205,13 @@ export function FamilyInfoStep() {
                     {family.zip_code && <> {family.zip_code}</>}
                   </>
                 ) : (
-                  'Not provided'
+                  t('common.notProvided')
                 )}
               </dd>
             </div>
             {family.diocese_id && (
               <div>
-                <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">Diocese ID</dt>
+                <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">{t('wizard.familyInfo.dioceseId')}</dt>
                 <dd className="mt-1 text-sm text-gray-900">{family.diocese_id}</dd>
               </div>
             )}
@@ -225,9 +227,9 @@ export function FamilyInfoStep() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
             </svg>
             <div>
-              <p className="text-sm font-medium text-amber-900">Family name required</p>
+              <p className="text-sm font-medium text-amber-900">{t('wizard.familyInfo.familyNameRequired')}</p>
               <p className="text-sm text-amber-700 mt-1">
-                Please enter a family name to continue.
+                {t('wizard.familyInfo.familyNameRequiredDesc')}
               </p>
             </div>
           </div>
@@ -238,7 +240,7 @@ export function FamilyInfoStep() {
       <WizardNavigation
         showBack={false}
         onNext={handleContinue}
-        nextLabel="Continue to Parents/Guardians"
+        nextLabel={t('wizard.familyInfo.continueToGuardians')}
         isLoading={isLoading}
         isNextDisabled={!isFamilyNameValid}
       />
