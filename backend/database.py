@@ -1,34 +1,19 @@
 import os
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 from sqlalchemy.orm import DeclarativeBase
-import sys
 
-# 1. Retrieve the Database URL from the environment
-# We default to an empty string to avoid errors if the file is missing,
-# but in production, this should always be set.
 DATABASE_URL = os.getenv("DATABASE_URL")
 
-# --- ADD THIS BLOCK FOR DEBUGGING ---
-print("--- DEBUGGING DATABASE CONNECTION ---")
-if DATABASE_URL is None:
-    print("ERROR: DATABASE_URL is None. The environment variable is missing.")
-else:
-    # WARNING: This prints your password to logs. Remove after fixing!
-    print(f"Attempting to connect to: {DATABASE_URL}")
-print("-------------------------------------")
-sys.stdout.flush() # Forces Docker to show this immediately
-# ------------------------------------
+if not DATABASE_URL:
+    raise RuntimeError("DATABASE_URL environment variable is not set.")
 
-# CRITICAL FIX for Supabase/Async:
-# The standard URL starts with "postgresql://".
-# We need to tell SQLAlchemy to use the "asyncpg" driver for speed.
-if DATABASE_URL and DATABASE_URL.startswith("postgresql://"):
+# Use asyncpg driver for async support
+if DATABASE_URL.startswith("postgresql://"):
     DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
 
-# 2. Create the "Engine"
-# The engine is the central connection point to the database.
-# echo=True prints the actual SQL queries to your console (great for debugging).
-engine = create_async_engine(DATABASE_URL, echo=True)
+DEBUG = os.getenv("DEBUG", "").lower() == "true"
+
+engine = create_async_engine(DATABASE_URL, echo=DEBUG)
 
 # 3. Create the "Session Factory"
 # A "Session" is a temporary workspace for your database operations.

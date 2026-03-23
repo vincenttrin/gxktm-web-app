@@ -19,7 +19,7 @@ from sqlalchemy import select, and_
 from sqlalchemy.orm import selectinload
 
 from database import get_db
-from models import Student, Class, Enrollment, Family
+from models import Student, Class, Enrollment, Family, Program
 from schemas import (
     ManualEnrollmentCreate,
     ManualEnrollmentResponse,
@@ -109,42 +109,85 @@ async def manual_enroll_student(
     if not student:
         raise HTTPException(status_code=404, detail="Student not found")
     
+    # Programs that enforce max 1 enrollment (replace existing)
+    SINGLE_ENROLLMENT_PROGRAMS = {"giao ly", "viet ngu"}
+
     enrolled_class_ids = []
     already_enrolled_class_ids = []
-    
+    replaced_class_ids = []
+
     for class_id in enrollment_data.class_ids:
-        # Verify class exists
+        # Verify class exists and load its program
         class_result = await db.execute(
-            select(Class).where(Class.id == class_id)
+            select(Class).options(selectinload(Class.program)).where(Class.id == class_id)
         )
         class_obj = class_result.scalar_one_or_none()
         if not class_obj:
             continue  # Skip invalid class IDs
-        
-        # Check if already enrolled
-        existing_result = await db.execute(
-            select(Enrollment).where(
-                and_(
-                    Enrollment.student_id == enrollment_data.student_id,
-                    Enrollment.class_id == class_id,
+
+        # Check if this is a single-enrollment program (Giao Ly / Viet Ngu)
+        program_name = class_obj.program.name if class_obj.program else None
+        is_single_enrollment = (
+            program_name and program_name.lower() in SINGLE_ENROLLMENT_PROGRAMS
+        )
+
+        if is_single_enrollment:
+            # Find existing enrollments in the same program AND academic year
+            existing_in_program = await db.execute(
+                select(Enrollment)
+                .join(Class)
+                .where(
+                    and_(
+                        Enrollment.student_id == enrollment_data.student_id,
+                        Class.program_id == class_obj.program_id,
+                        Class.academic_year_id == class_obj.academic_year_id,
+                    )
                 )
             )
-        )
-        if existing_result.scalar_one_or_none():
-            already_enrolled_class_ids.append(str(class_id))
-            continue
-        
-        # Create enrollment
-        enrollment = Enrollment(
-            student_id=enrollment_data.student_id,
-            class_id=class_id,
-        )
-        db.add(enrollment)
-        enrolled_class_ids.append(str(class_id))
-    
+            old_enrollments = existing_in_program.scalars().all()
+
+            # Check if already enrolled in this exact class
+            exact_match = any(e.class_id == class_id for e in old_enrollments)
+            if exact_match:
+                already_enrolled_class_ids.append(str(class_id))
+            else:
+                # Delete existing enrollments in same program (replace)
+                for old_enrollment in old_enrollments:
+                    replaced_class_ids.append(str(old_enrollment.class_id))
+                    await db.delete(old_enrollment)
+                # Create new enrollment
+                enrollment = Enrollment(
+                    student_id=enrollment_data.student_id,
+                    class_id=class_id,
+                )
+                db.add(enrollment)
+                enrolled_class_ids.append(str(class_id))
+        else:
+            # Multi-enrollment program (e.g., TNTT) - keep existing behavior
+            existing_result = await db.execute(
+                select(Enrollment).where(
+                    and_(
+                        Enrollment.student_id == enrollment_data.student_id,
+                        Enrollment.class_id == class_id,
+                    )
+                )
+            )
+            if existing_result.scalar_one_or_none():
+                already_enrolled_class_ids.append(str(class_id))
+                continue
+
+            enrollment = Enrollment(
+                student_id=enrollment_data.student_id,
+                class_id=class_id,
+            )
+            db.add(enrollment)
+            enrolled_class_ids.append(str(class_id))
+
     await db.commit()
-    
+
     message = f"Enrolled in {len(enrolled_class_ids)} class(es)"
+    if replaced_class_ids:
+        message += f", {len(replaced_class_ids)} replaced"
     if already_enrolled_class_ids:
         message += f", {len(already_enrolled_class_ids)} already enrolled"
     

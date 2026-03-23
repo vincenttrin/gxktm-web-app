@@ -50,7 +50,7 @@ class TestGetAllFamilies:
         fake_families = [_make_fake_family(), _make_fake_family("Tran Family")]
 
         # Wire the mock: db.execute(...) → result.scalars().all() → fake list
-        mock_result = AsyncMock()
+        mock_result = MagicMock()
         mock_result.scalars.return_value.all.return_value = fake_families
         mock_db.execute.return_value = mock_result
 
@@ -66,7 +66,7 @@ class TestGetAllFamilies:
     @pytest.mark.asyncio
     async def test_returns_empty_when_no_families(self, client, mock_db):
         """GET /api/families/all returns [] when the table is empty."""
-        mock_result = AsyncMock()
+        mock_result = MagicMock()
         mock_result.scalars.return_value.all.return_value = []
         mock_db.execute.return_value = mock_result
 
@@ -87,7 +87,7 @@ class TestCreateFamily:
         fake_family = _make_fake_family()
 
         # After commit, the router re-fetches with relationships.
-        mock_result = AsyncMock()
+        mock_result = MagicMock()
         mock_result.scalar_one.return_value = fake_family
         mock_db.execute.return_value = mock_result
 
@@ -127,7 +127,7 @@ class TestCreateFamily:
         guardian.relationship_to_family = "Mother"
         fake_family.guardians = [guardian]
 
-        mock_result = AsyncMock()
+        mock_result = MagicMock()
         mock_result.scalar_one.return_value = fake_family
         mock_db.execute.return_value = mock_result
 

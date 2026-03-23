@@ -4,6 +4,7 @@ import { useEffect, useMemo } from 'react';
 import { useEnrollment } from '../EnrollmentContext';
 import { WizardNavigation } from './WizardNavigation';
 import { ClassSelection } from '@/types/enrollment';
+import { useTranslation } from '@/lib/i18n';
 
 // Grade level options (1-9) plus completed option
 const GRADE_LEVELS = [
@@ -27,6 +28,7 @@ const COURSE_BADGE_STYLES = {
 
 export function ClassSelectionStep() {
   const { state, updateClassSelections, goToNextStep, goToPreviousStep } = useEnrollment();
+  const { t } = useTranslation();
   const { formState, academicYear, suggestedEnrollments, isLoading } = state;
   const children = formState.children;
   const classSelections = formState.classSelections;
@@ -40,7 +42,34 @@ export function ClassSelectionStep() {
         let giaoLyCompleted = false;
         let vietNguCompleted = false;
         
-        // Default to level 1 if no previous enrollment found and child has grade_level
+        // First, try to use suggested enrollments (grade progression from last year)
+        const suggestion = suggestedEnrollments.find(s => s.student_id === child.id);
+        if (suggestion && suggestion.suggested_classes.length > 0) {
+          for (const cls of suggestion.suggested_classes) {
+            const programName = cls.program_name?.toLowerCase() || '';
+            const className = cls.class_name.toLowerCase();
+            const isGiaoLy = programName.includes('giao ly') || programName.includes('giáo lý') || className.includes('giao ly') || className.includes('giáo lý');
+            const isVietNgu = programName.includes('viet ngu') || programName.includes('việt ngữ') || className.includes('viet ngu') || className.includes('việt ngữ');
+            const match = cls.class_name.match(/(\d+)/);
+            const level = match ? parseInt(match[1], 10) : null;
+            
+            if (level && isGiaoLy) {
+              if (level > 9) {
+                giaoLyCompleted = true;
+              } else {
+                giaoLyLevel = level;
+              }
+            } else if (level && isVietNgu) {
+              if (level > 9) {
+                vietNguCompleted = true;
+              } else {
+                vietNguLevel = level;
+              }
+            }
+          }
+        }
+        
+        // Fallback: default to grade_level if no suggestion matched
         if (giaoLyLevel === null && !giaoLyCompleted && child.grade_level) {
           giaoLyLevel = Math.min(child.grade_level, 9);
         }
@@ -130,13 +159,13 @@ export function ClassSelectionStep() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h2 className="text-2xl font-bold text-gray-900">Class Selection</h2>
+        <h2 className="text-2xl font-bold text-gray-900">{t('wizard.classSelection.title')}</h2>
         <p className="mt-1 text-sm text-gray-600">
-          Select class levels for each child. You can enroll in Giáo Lý (Religious Education), Việt Ngữ (Vietnamese Language), or both.
+          {t('wizard.classSelection.description')}
         </p>
         {academicYear && (
           <p className="mt-2 text-sm font-medium text-blue-600">
-            Academic Year: {academicYear.name}
+            {t('wizard.classSelection.academicYear')}: {academicYear.name}
           </p>
         )}
       </div>
@@ -201,7 +230,7 @@ export function ClassSelectionStep() {
                       )}
                     </h3>
                     {child.grade_level && (
-                      <p className="text-sm text-gray-600">School Grade: {child.grade_level}</p>
+                      <p className="text-sm text-gray-600">{t('wizard.classSelection.schoolGrade')}: {child.grade_level}</p>
                     )}
                     <div className="mt-3 rounded-lg border border-white/70 bg-white/60 px-3 py-2 text-xs text-gray-700">
                       <div className="flex items-center gap-2 font-semibold">
@@ -209,7 +238,7 @@ export function ClassSelectionStep() {
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-2.21 0-4 1.567-4 3.5S9.79 15 12 15s4-1.567 4-3.5S14.21 8 12 8z" />
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6.343 17.657A8 8 0 1117.657 6.343 8 8 0 016.343 17.657z" />
                         </svg>
-                        <span>Current Academic Year</span>
+                        <span>{t('wizard.classSelection.currentAcademicYear')}</span>
                         {academicYear && (
                           <span className="font-normal text-gray-500">({academicYear.name})</span>
                         )}
@@ -235,7 +264,7 @@ export function ClassSelectionStep() {
                                   key={program}
                                   className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800"
                                 >
-                                  {program} completed
+                                  {program} {t('wizard.classSelection.completed')}
                                 </span>
                               ))}
                             </div>
@@ -244,8 +273,8 @@ export function ClassSelectionStep() {
                       ) : (
                         <p className="mt-2 text-xs text-gray-600">
                           {child.grade_level && child.grade_level >= 9
-                            ? 'Completed all courses for this academic year.'
-                            : 'No courses recorded for this academic year yet.'}
+                            ? t('wizard.classSelection.completedAllCourses')
+                            : t('wizard.classSelection.noCoursesRecorded')}
                         </p>
                       )}
                     </div>
@@ -265,8 +294,8 @@ export function ClassSelectionStep() {
                         </svg>
                       </div>
                       <div>
-                        <h4 className="font-semibold text-amber-900">Giáo Lý</h4>
-                        <p className="text-xs text-amber-700">Religious Education</p>
+                        <h4 className="font-semibold text-amber-900">{t('wizard.classSelection.giaoLy')}</h4>
+                        <p className="text-xs text-amber-700">{t('wizard.classSelection.religiousEducation')}</p>
                       </div>
                     </div>
                     
@@ -279,25 +308,25 @@ export function ClassSelectionStep() {
                       onChange={(e) => handleGiaoLyChange(index, e.target.value)}
                       className="block w-full rounded-lg border border-amber-300 bg-white px-3 py-2.5 text-gray-900 focus:border-amber-500 focus:ring-2 focus:ring-amber-500 focus:ring-opacity-20 transition-all"
                     >
-                      <option value="">Not Enrolling</option>
+                      <option value="">{t('wizard.classSelection.notEnrolling')}</option>
                       {GRADE_LEVELS.filter(g => g.value !== null).map(grade => (
                         <option key={grade.value} value={grade.value!.toString()}>
-                          {grade.label}
+                          {t('wizard.classSelection.level', { num: grade.value })}
                         </option>
                       ))}
-                      <option value="completed">✓ Already Completed (All 9 Levels)</option>
+                      <option value="completed">{t('wizard.classSelection.alreadyCompleted')}</option>
                     </select>
-                    
+
                     {selection.giao_ly_completed && (
                       <div className="mt-2 flex items-center gap-1 text-sm text-green-700">
                         <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
-                        Completed all levels
+                        {t('wizard.classSelection.completedAllLevels')}
                       </div>
                     )}
                   </div>
-                  
+
                   {/* Việt Ngữ Selection */}
                   <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
                     <div className="flex items-center gap-2 mb-3">
@@ -307,35 +336,35 @@ export function ClassSelectionStep() {
                         </svg>
                       </div>
                       <div>
-                        <h4 className="font-semibold text-blue-900">Việt Ngữ</h4>
-                        <p className="text-xs text-blue-700">Vietnamese Language</p>
+                        <h4 className="font-semibold text-blue-900">{t('wizard.classSelection.vietNgu')}</h4>
+                        <p className="text-xs text-blue-700">{t('wizard.classSelection.vietnameseLanguage')}</p>
                       </div>
                     </div>
-                    
+
                     <select
                       value={
-                        selection.viet_ngu_completed 
-                          ? 'completed' 
+                        selection.viet_ngu_completed
+                          ? 'completed'
                           : selection.viet_ngu_level?.toString() || ''
                       }
                       onChange={(e) => handleVietNguChange(index, e.target.value)}
                       className="block w-full rounded-lg border border-blue-300 bg-white px-3 py-2.5 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-20 transition-all"
                     >
-                      <option value="">Not Enrolling</option>
+                      <option value="">{t('wizard.classSelection.notEnrolling')}</option>
                       {GRADE_LEVELS.filter(g => g.value !== null).map(grade => (
                         <option key={grade.value} value={grade.value!.toString()}>
-                          {grade.label}
+                          {t('wizard.classSelection.level', { num: grade.value })}
                         </option>
                       ))}
-                      <option value="completed">✓ Already Completed (All 9 Levels)</option>
+                      <option value="completed">{t('wizard.classSelection.alreadyCompleted')}</option>
                     </select>
-                    
+
                     {selection.viet_ngu_completed && (
                       <div className="mt-2 flex items-center gap-1 text-sm text-green-700">
                         <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
-                        Completed all levels
+                        {t('wizard.classSelection.completedAllLevels')}
                       </div>
                     )}
                   </div>
@@ -347,22 +376,22 @@ export function ClassSelectionStep() {
                     <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                     </svg>
-                    <span className="font-medium">Enrolling in:</span>
+                    <span className="font-medium">{t('wizard.classSelection.enrollingIn')}</span>
                     {selection.giao_ly_level && (
                       <span className="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800">
-                        Giáo Lý Level {selection.giao_ly_level}
+                        {t('wizard.classSelection.giaoLyLevel', { level: selection.giao_ly_level })}
                       </span>
                     )}
                     {selection.viet_ngu_level && (
                       <span className="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800">
-                        Việt Ngữ Level {selection.viet_ngu_level}
+                        {t('wizard.classSelection.vietNguLevel', { level: selection.viet_ngu_level })}
                       </span>
                     )}
                     {!selection.giao_ly_level && !selection.viet_ngu_level && !selection.giao_ly_completed && !selection.viet_ngu_completed && (
-                      <span className="text-red-600">No classes selected</span>
+                      <span className="text-red-600">{t('wizard.classSelection.noClassesSelected')}</span>
                     )}
                     {(selection.giao_ly_completed || selection.viet_ngu_completed) && !selection.giao_ly_level && !selection.viet_ngu_level && (
-                      <span className="text-gray-500">Completed program(s)</span>
+                      <span className="text-gray-500">{t('wizard.classSelection.completedPrograms')}</span>
                     )}
                   </div>
                 </div>
@@ -380,9 +409,9 @@ export function ClassSelectionStep() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
             </svg>
             <div>
-              <p className="text-sm font-medium text-amber-900">Class selection required</p>
+              <p className="text-sm font-medium text-amber-900">{t('wizard.classSelection.classSelectionRequired')}</p>
               <p className="text-sm text-amber-700 mt-1">
-                Each child must be enrolled in at least one program (or have completed all levels) to continue.
+                {t('wizard.classSelection.classSelectionRequiredDesc')}
               </p>
             </div>
           </div>
@@ -393,8 +422,8 @@ export function ClassSelectionStep() {
       <WizardNavigation
         onBack={goToPreviousStep}
         onNext={goToNextStep}
-        backLabel="Back to Emergency Contacts"
-        nextLabel="Review Enrollment"
+        backLabel={t('wizard.classSelection.backToEmergency')}
+        nextLabel={t('wizard.classSelection.reviewEnrollment')}
         isLoading={isLoading}
         isNextDisabled={!canContinue}
       />

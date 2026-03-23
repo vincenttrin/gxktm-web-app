@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { X, DollarSign, Calendar, CreditCard, FileText } from 'lucide-react';
-import { markFamilyAsPaid, createPayment, updatePayment, getFamilyPayments } from '@/lib/api';
+import { createPayment, updatePayment, getFamilyPayments } from '@/lib/api';
 import { Payment, FamilyWithPayment } from '@/types/family';
 
 interface PaymentModalProps {
@@ -26,13 +26,13 @@ export default function PaymentModal({
   
   // Form state
   const [amountDue, setAmountDue] = useState<string>(
-    family.payment_status?.amount_due?.toString() || ''
+    family.payment_status?.amount_due?.toString() ||
+    (family.enrolled_class_count ? (family.enrolled_class_count * 80).toString() : '')
   );
   const [amountPaid, setAmountPaid] = useState<string>(
-    family.payment_status?.amount_due?.toString() || 
-    family.payment_status?.amount_paid?.toString() || 
-    ''
+    family.payment_status?.amount_paid?.toString() || ''
   );
+  const [markFullyPaid, setMarkFullyPaid] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<string>('cash');
   const [paymentDate, setPaymentDate] = useState<string>(
     new Date().toISOString().split('T')[0]
@@ -64,36 +64,20 @@ export default function PaymentModal({
     loadPaymentHistory();
   }, [loadPaymentHistory]);
 
-  const handleMarkAsPaid = async () => {
-    setIsLoading(true);
-    try {
-      await markFamilyAsPaid(
-        family.id,
-        schoolYear,
-        amountPaid ? parseFloat(amountPaid) : undefined,
-        paymentMethod,
-        notes || undefined
-      );
-      showToast(`${family.family_name} marked as paid`, 'success');
-      onSuccess();
-    } catch (error) {
-      console.error('Failed to mark as paid:', error);
-      showToast('Failed to record payment', 'error');
-    } finally {
-      setIsLoading(false);
+  const handleSavePayment = async () => {
+    if (isLoadingHistory) {
+      showToast('Please wait for payment history to load', 'error');
+      return;
     }
-  };
-
-  const handleRecordPartialPayment = async () => {
     if (!amountPaid) {
       showToast('Please enter amount paid', 'error');
       return;
     }
-    
+
     setIsLoading(true);
     try {
       const existingPayment = paymentHistory.find(p => p.school_year === schoolYear);
-      
+
       if (existingPayment) {
         // Update existing payment
         await updatePayment(existingPayment.id, {
@@ -115,12 +99,13 @@ export default function PaymentModal({
           notes: notes || null,
         });
       }
-      
+
       showToast('Payment recorded successfully', 'success');
       onSuccess();
     } catch (error) {
       console.error('Failed to record payment:', error);
-      showToast('Failed to record payment', 'error');
+      const message = error instanceof Error ? error.message : 'Failed to record payment';
+      showToast(message, 'error');
     } finally {
       setIsLoading(false);
     }
@@ -140,7 +125,7 @@ export default function PaymentModal({
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
       <div className="flex min-h-screen items-center justify-center p-4">
-        <div className="fixed inset-0 bg-black/50" onClick={onClose} />
+        <div className="fixed inset-0 bg-black/50" onClick={() => { if (!isLoading) onClose(); }} />
         
         <div className="relative bg-white rounded-xl shadow-xl w-full max-w-lg">
           {/* Header */}
@@ -150,8 +135,9 @@ export default function PaymentModal({
               <p className="text-sm text-gray-500">{family.family_name} • {schoolYear}</p>
             </div>
             <button
-              onClick={onClose}
-              className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"
+              onClick={() => { if (!isLoading) onClose(); }}
+              disabled={isLoading}
+              className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 disabled:opacity-50"
             >
               <X className="h-5 w-5" />
             </button>
@@ -198,14 +184,45 @@ export default function PaymentModal({
                 <input
                   type="number"
                   step="0.01"
-                  value={amountPaid}
+                  value={amountDue}
                   onChange={(e) => setAmountPaid(e.target.value)}
                   placeholder="0.00"
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-gray-700"
                 />
               </div>
             </div>
-            
+
+            {amountDue && (
+              <div className="text-sm font-medium">
+                Balance:{' '}
+                <span className={
+                  (() => {
+                    const balance = parseFloat(amountDue) - parseFloat(amountPaid || '0');
+                    if (balance <= 0) return 'text-green-600';
+                    if (balance < parseFloat(amountDue)) return 'text-yellow-600';
+                    return 'text-red-600';
+                  })()
+                }>
+                  ${(parseFloat(amountDue) - parseFloat(amountPaid || '0')).toFixed(2)}
+                </span>
+              </div>
+            )}
+
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={markFullyPaid}
+                onChange={(e) => {
+                  setMarkFullyPaid(e.target.checked);
+                  if (e.target.checked && amountDue) {
+                    setAmountPaid(amountDue);
+                  }
+                }}
+                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+              <span className="text-sm text-gray-700">Mark as Fully Paid</span>
+            </label>
+
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -258,7 +275,7 @@ export default function PaymentModal({
           {paymentHistory.length > 0 && (
             <div className="px-6 pb-4">
               <h3 className="text-sm font-medium text-gray-700 mb-2">Payment History</h3>
-              <div className="max-h-32 overflow-y-auto border rounded-lg">
+              <div className="max-h-48 overflow-y-auto border rounded-lg">
                 {isLoadingHistory ? (
                   <div className="p-3 text-center text-gray-500 text-sm">Loading...</div>
                 ) : (
@@ -267,6 +284,8 @@ export default function PaymentModal({
                       <tr>
                         <th className="px-3 py-2 text-left text-gray-600">Year</th>
                         <th className="px-3 py-2 text-left text-gray-600">Status</th>
+                        <th className="px-3 py-2 text-left text-gray-600">Method</th>
+                        <th className="px-3 py-2 text-left text-gray-600">Date</th>
                         <th className="px-3 py-2 text-right text-gray-600">Amount</th>
                       </tr>
                     </thead>
@@ -275,6 +294,8 @@ export default function PaymentModal({
                         <tr key={payment.id}>
                           <td className="px-3 py-2">{payment.school_year}</td>
                           <td className="px-3 py-2">{getStatusBadge(payment.payment_status)}</td>
+                          <td className="px-3 py-2 capitalize">{payment.payment_method || '-'}</td>
+                          <td className="px-3 py-2">{payment.payment_date || '-'}</td>
                           <td className="px-3 py-2 text-right">${payment.amount_paid}</td>
                         </tr>
                       ))}
@@ -288,18 +309,18 @@ export default function PaymentModal({
           {/* Actions */}
           <div className="flex items-center gap-3 p-6 border-t bg-gray-50 rounded-b-xl">
             <button
-              onClick={handleRecordPartialPayment}
+              onClick={onClose}
               disabled={isLoading}
               className="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50 font-medium"
             >
-              Record Payment
+              Cancel
             </button>
             <button
-              onClick={handleMarkAsPaid}
-              disabled={isLoading}
+              onClick={handleSavePayment}
+              disabled={isLoading || isLoadingHistory}
               className="flex-1 px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 font-medium"
             >
-              {isLoading ? 'Processing...' : 'Mark as Paid'}
+              {isLoading ? 'Processing...' : isLoadingHistory ? 'Loading...' : 'Save Payment'}
             </button>
           </div>
         </div>

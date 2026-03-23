@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import { useRouter } from 'next/navigation';
 import { useEnrollment } from './EnrollmentContext';
+import { useTranslation } from '@/lib/i18n';
 import { WizardHeader } from './components/WizardHeader';
 import { ProgressIndicator } from './components/ProgressIndicator';
 import { FamilyInfoStep } from './components/FamilyInfoStep';
@@ -24,6 +25,7 @@ import {
 
 export default function EnrollmentWizardPage() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [isInitializing, setIsInitializing] = useState(true);
   const [initError, setInitError] = useState<string | null>(null);
   
@@ -128,8 +130,8 @@ export default function EnrollmentWizardPage() {
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="mx-auto h-12 w-12 rounded-full border-4 border-blue-200 border-t-blue-600 animate-spin mb-4" />
-          <p className="text-gray-600 font-medium">Loading enrollment portal...</p>
-          <p className="text-sm text-gray-500 mt-1">Please wait while we prepare your information.</p>
+          <p className="text-gray-600 font-medium">{t('wizard.loadingPortal')}</p>
+          <p className="text-sm text-gray-500 mt-1">{t('wizard.loadingWait')}</p>
         </div>
       </div>
     );
@@ -145,7 +147,7 @@ export default function EnrollmentWizardPage() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
             </svg>
           </div>
-          <h2 className="text-xl font-bold text-gray-900 mb-2">Unable to Load Enrollment Portal</h2>
+          <h2 className="text-xl font-bold text-gray-900 mb-2">{t('wizard.unableToLoad')}</h2>
           <p className="text-gray-600 mb-6">{initError}</p>
           <div className="flex flex-col gap-3">
             <button
@@ -155,13 +157,13 @@ export default function EnrollmentWizardPage() {
               <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
               </svg>
-              Try Again
+              {t('common.tryAgain')}
             </button>
             <button
               onClick={() => router.push('/enroll')}
               className="w-full inline-flex items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-all"
             >
-              Return to Start
+              {t('common.returnToStart')}
             </button>
             {/* <button
               onClick={() => router.push('/enroll')}
@@ -220,9 +222,12 @@ export default function EnrollmentWizardPage() {
           )}
           
           {/* Step Content */}
-          <div className="bg-gray-50 rounded-2xl p-6 sm:p-8">
-            {renderStep()}
-          </div>
+          {state.step !== 'confirmation' && (
+            <div className="bg-gray-50 rounded-2xl p-6 sm:p-8">
+              {renderStep()}
+            </div>
+          )}
+          {state.step === 'confirmation' && <ConfirmationStep />}
         </div>
       </main>
       
@@ -230,9 +235,9 @@ export default function EnrollmentWizardPage() {
       <footer className="py-6 border-t border-gray-200 bg-white">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
           <p className="text-center text-xs text-gray-500">
-            © 2025 GXKTM. All rights reserved. Need help?{' '}
-            <a href="mailto:support@gxktm.org" className="text-blue-600 hover:underline">
-              Contact Support
+            {t('wizard.footer.copyright')} {t('common.allRightsReserved')} {t('common.needHelp')}{' '}
+            <a href={`mailto:${process.env.NEXT_PUBLIC_CONTACT_EMAIL || 'giaoxukinhthanh@gmail.com'}`} className="text-blue-600 hover:underline">
+              {t('common.contactSupport')}
             </a>
           </p>
         </div>

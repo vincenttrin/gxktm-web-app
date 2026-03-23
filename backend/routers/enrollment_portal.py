@@ -9,6 +9,7 @@ This router provides endpoints for:
 - Grade progression logic
 """
 
+import logging
 from uuid import UUID, uuid4
 from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -16,6 +17,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, desc
 from sqlalchemy.orm import selectinload
 import re
+
+logger = logging.getLogger(__name__)
 
 from database import get_db
 from models import Family, Guardian, Student, Enrollment, Class, AcademicYear, Program, EmergencyContact
@@ -26,6 +29,7 @@ from schemas import (
     EnrollmentSubmissionRequest,
     EnrollmentSubmissionResponse,
 )
+from auth import get_current_user, UserInfo
 
 router = APIRouter(prefix="/api/enrollment", tags=["enrollment"])
 
@@ -75,16 +79,27 @@ def get_next_class_name(class_name: str) -> Optional[str]:
 
 
 async def get_active_or_latest_academic_year(db: AsyncSession) -> AcademicYear:
-    """Return the active academic year if available, otherwise the newest configured year."""
-    active_result = await db.execute(
+    """Return the newest academic year where enrollment is open, otherwise the newest year overall.
+    
+    Priority order:
+    1. Newest year (highest start_year) with enrollment_open=True
+    2. Newest year overall (fallback)
+    
+    This ensures that when a new year is created with enrollment_open=True while
+    the old year is still is_active=True, parents enroll into the new year.
+    """
+    # First: try newest year with enrollment open
+    open_result = await db.execute(
         select(AcademicYear)
-        .where(AcademicYear.is_active.is_(True))
+        .where(AcademicYear.enrollment_open.is_(True))
         .order_by(desc(AcademicYear.start_year), desc(AcademicYear.id))
         .limit(1)
     )
-    active_year = active_result.scalar_one_or_none()
-    if active_year:
-        return active_year
+    open_year = open_result.scalar_one_or_none()
+    if open_year:
+        return open_year
+    
+    # Fallback: newest year overall (enrollment may be closed)
     latest_result = await db.execute(
         select(AcademicYear)
         .order_by(desc(AcademicYear.start_year), desc(AcademicYear.id))
@@ -105,6 +120,7 @@ async def get_active_or_latest_academic_year(db: AsyncSession) -> AcademicYear:
 async def lookup_family_by_email(
     email: str = Query(..., description="Email address to look up"),
     db: AsyncSession = Depends(get_db),
+    current_user: UserInfo = Depends(get_current_user),
 ):
     """
     Look up a family by guardian email address.
@@ -139,6 +155,7 @@ async def lookup_family_by_email(
 async def get_family_for_enrollment(
     family_id: UUID,
     db: AsyncSession = Depends(get_db),
+    current_user: UserInfo = Depends(get_current_user),
 ):
     """
     Get full family data for enrollment, including guardians, students, and emergency contacts.
@@ -186,34 +203,6 @@ async def get_current_academic_year(
         "enrollment_open": getattr(academic_year, 'enrollment_open', True),
         "start_year": getattr(academic_year, 'start_year', None),
         "end_year": getattr(academic_year, 'end_year', None),
-    }
-
-
-@router.get("/school-year/current")
-async def get_current_school_year_for_enrollment(
-    db: AsyncSession = Depends(get_db),
-):
-    """
-    Get the current/newest school year for enrollment.
-    
-    Returns the newest school year that parents should enroll into.
-    """
-    school_year = await get_active_or_latest_academic_year(db)
-    
-    if hasattr(school_year, 'enrollment_open') and school_year.enrollment_open is False:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Enrollment for {school_year.name} is currently closed. Please contact administration."
-        )
-    
-    return {
-        "id": school_year.id,
-        "year_label": school_year.name,
-        "name": school_year.name,
-        "is_current": school_year.is_current,
-        "enrollment_open": getattr(school_year, 'enrollment_open', True),
-        "start_year": getattr(school_year, 'start_year', None),
-        "end_year": getattr(school_year, 'end_year', None),
     }
 
 
@@ -285,6 +274,7 @@ async def get_classes_for_enrollment(
 async def get_suggested_enrollments(
     family_id: UUID,
     db: AsyncSession = Depends(get_db),
+    current_user: UserInfo = Depends(get_current_user),
 ):
     """
     Get suggested enrollments for a family based on last year's enrollments
@@ -393,6 +383,7 @@ async def get_programs(
 async def submit_enrollment(
     request: EnrollmentSubmissionRequest,
     db: AsyncSession = Depends(get_db),
+    current_user: UserInfo = Depends(get_current_user),
 ):
     """
     Submit a complete family enrollment.
@@ -405,7 +396,19 @@ async def submit_enrollment(
     - Creating enrollments for selected classes
     
     The operation is transactional - all changes succeed or fail together.
+    Ownership check: the authenticated user's email must match one of the
+    submitted guardians' emails.
     """
+    # Ownership check: authenticated user must be a guardian on this submission
+    submitted_emails = [g.email.lower() for g in request.guardians if g.email]
+    if current_user.email.lower() not in submitted_emails:
+        # Allow admins to bypass ownership check
+        if not current_user.is_admin:
+            raise HTTPException(
+                status_code=403,
+                detail="You can only submit enrollments for your own family. "
+                       "Ensure your email address is listed as a guardian."
+            )
     from uuid import uuid4
     
     try:
@@ -483,9 +486,6 @@ async def submit_enrollment(
         guardians_to_delete = existing_guardian_ids - submitted_guardian_ids
         if guardians_to_delete:
             for gid in guardians_to_delete:
-                await db.execute(
-                    select(Guardian).where(Guardian.id == gid)
-                )
                 guardian_to_del = (await db.execute(
                     select(Guardian).where(Guardian.id == gid)
                 )).scalar_one_or_none()
@@ -522,7 +522,7 @@ async def submit_enrollment(
                 student.gender = student_data.gender
                 student.grade_level = student_data.grade_level
                 student.american_school = student_data.american_school
-                student.notes = student_data.notes or student_data.special_needs
+                student.notes = student_data.special_needs or student_data.notes
                 submitted_student_ids.add(student_uuid)
                 # Map the string ID to the UUID for class selection lookup
                 student_id_map[student_data.id] = student.id
@@ -539,7 +539,7 @@ async def submit_enrollment(
                     gender=student_data.gender,
                     grade_level=student_data.grade_level,
                     american_school=student_data.american_school,
-                    notes=student_data.notes or student_data.special_needs,
+                    notes=student_data.special_needs or student_data.notes,
                 )
                 db.add(new_student)
                 await db.flush()
@@ -619,11 +619,18 @@ async def submit_enrollment(
         for cls in current_year_classes:
             if cls.program:
                 level = parse_class_level(cls.name)
+                program_name = cls.program.name.lower()
                 if level:
-                    if "Giao Ly" in cls.program.name or "Giáo Lý" in cls.name:
+                    if "giao ly" in program_name or "giáo lý" in program_name:
                         giao_ly_classes[level] = cls.id
-                    elif "Viet Ngu" in cls.program.name or "Việt Ngữ" in cls.name:
+                    elif "viet ngu" in program_name or "việt ngữ" in program_name:
                         viet_ngu_classes[level] = cls.id
+        
+        if not giao_ly_classes and not viet_ngu_classes:
+            logger.warning(
+                f"No Giáo Lý or Việt Ngữ classes matched for academic year {request.academic_year_id}. "
+                f"Available programs: {[cls.program.name for cls in current_year_classes if cls.program]}"
+            )
         
         # Delete existing enrollments for students in current year classes
         for student_data in request.students:
@@ -688,7 +695,8 @@ async def submit_enrollment(
         raise
     except Exception as e:
         await db.rollback()
+        logger.error(f"Enrollment submission failed: {e}")
         raise HTTPException(
             status_code=500,
-            detail=f"Failed to submit enrollment: {str(e)}"
+            detail="Failed to submit enrollment. Please try again or contact administration."
         )

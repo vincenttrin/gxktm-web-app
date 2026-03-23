@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useReducer, useCallback, ReactNode } from 'react';
+import React, { createContext, useContext, useReducer, useCallback, useEffect, ReactNode } from 'react';
 import {
   EnrollmentWizardState,
   EnrollmentStep,
@@ -110,7 +110,14 @@ function enrollmentReducer(state: EnrollmentWizardState, action: EnrollmentActio
         originalFamily: action.payload,
         formState: {
           ...state.formState,
-          family: action.payload,
+          // Store family info without nested arrays to avoid dual source of truth.
+          // The canonical lists are formState.guardians, formState.children, formState.emergencyContacts.
+          family: {
+            ...action.payload,
+            guardians: [],
+            students: [],
+            emergency_contacts: [],
+          },
           guardians: action.payload.guardians,
           children: action.payload.students,
           emergencyContacts: action.payload.emergency_contacts,
@@ -239,9 +246,60 @@ const EnrollmentContext = createContext<EnrollmentContextType | undefined>(undef
 // Step order for navigation
 const stepOrder: EnrollmentStep[] = ['family-info', 'guardians', 'children', 'emergency-contacts', 'class-selection', 'review', 'confirmation'];
 
+const STORAGE_KEY = 'gxktm_enrollment_wizard_state';
+
+/**
+ * Try to restore wizard state from sessionStorage.
+ * Returns the stored state if valid, otherwise returns the default initialState.
+ */
+function getPersistedState(): EnrollmentWizardState {
+  if (typeof window === 'undefined') return initialState;
+  try {
+    const stored = sessionStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      const parsed = JSON.parse(stored) as EnrollmentWizardState;
+      // Don't restore if the wizard was on the confirmation step
+      // (meaning enrollment was already submitted)
+      if (parsed.step === 'confirmation') {
+        sessionStorage.removeItem(STORAGE_KEY);
+        return initialState;
+      }
+      // Reset transient flags
+      parsed.isLoading = false;
+      parsed.isSubmitting = false;
+      parsed.error = null;
+      return parsed;
+    }
+  } catch {
+    sessionStorage.removeItem(STORAGE_KEY);
+  }
+  return initialState;
+}
+
 // Provider component
 export function EnrollmentProvider({ children }: { children: ReactNode }) {
-  const [state, dispatch] = useReducer(enrollmentReducer, initialState);
+  const [state, dispatch] = useReducer(enrollmentReducer, undefined, getPersistedState);
+
+  // Persist state to sessionStorage on every change
+  useEffect(() => {
+    try {
+      // Clear storage when we reach confirmation (submission complete)
+      if (state.step === 'confirmation') {
+        sessionStorage.removeItem(STORAGE_KEY);
+        return;
+      }
+      // Don't persist transient flags
+      const toStore = {
+        ...state,
+        isLoading: false,
+        isSubmitting: false,
+        error: null,
+      };
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(toStore));
+    } catch {
+      // sessionStorage may be full or unavailable — silently ignore
+    }
+  }, [state]);
 
   const setUserEmail = useCallback((email: string) => {
     dispatch({ type: 'SET_USER_EMAIL', payload: email });

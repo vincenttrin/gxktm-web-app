@@ -9,10 +9,13 @@ All endpoints require admin privileges.
 Uses Supabase Admin API (service role key).
 """
 
+import logging
 from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 import httpx
+
+logger = logging.getLogger(__name__)
 
 from auth import require_admin, UserInfo
 from config import get_settings
@@ -60,7 +63,7 @@ async def list_users(
     if not settings.supabase_url or not settings.supabase_service_role_key:
         raise HTTPException(
             status_code=500,
-            detail="Supabase configuration missing. Check SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY. ERROR HERE IDIOT"
+            detail="Authentication service not configured"
         )
     
     try:
@@ -82,7 +85,7 @@ async def list_users(
             if response.status_code != 200:
                 raise HTTPException(
                     status_code=response.status_code,
-                    detail=f"Failed to fetch users: {response.text}"
+                    detail="Failed to fetch users"
                 )
             
             data = response.json()
@@ -112,9 +115,10 @@ async def list_users(
             return user_list
             
     except httpx.RequestError as e:
+        logger.error(f"Supabase connection error: {e}")
         raise HTTPException(
             status_code=503,
-            detail=f"Unable to connect to Supabase: {str(e)}"
+            detail="Unable to connect to authentication service"
         )
 
 
@@ -169,7 +173,7 @@ async def update_user_role(
             if get_response.status_code != 200:
                 raise HTTPException(
                     status_code=get_response.status_code,
-                    detail=f"Failed to fetch user: {get_response.text}"
+                    detail="Failed to fetch user"
                 )
             
             current_user_data = get_response.json()
@@ -198,7 +202,7 @@ async def update_user_role(
             if response.status_code not in [200, 201]:
                 raise HTTPException(
                     status_code=response.status_code,
-                    detail=f"Failed to update user role: {response.text}"
+                    detail="Failed to update user role"
                 )
             
             updated_user = response.json()
@@ -214,9 +218,10 @@ async def update_user_role(
             )
             
     except httpx.RequestError as e:
+        logger.error(f"Supabase connection error: {e}")
         raise HTTPException(
             status_code=503,
-            detail=f"Unable to connect to Supabase: {str(e)}"
+            detail="Unable to connect to authentication service"
         )
 
 
@@ -275,7 +280,8 @@ async def get_user_counts(
             }
             
     except httpx.RequestError as e:
+        logger.error(f"Supabase connection error: {e}")
         raise HTTPException(
             status_code=503,
-            detail=f"Unable to connect to Supabase: {str(e)}"
+            detail="Unable to connect to authentication service"
         )
