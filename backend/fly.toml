@@ -1,0 +1,23 @@
+app = "gxktm_backend" # Change this to your desired globally unique app name
+primary_region = "ord"
+
+[build]
+  dockerfile = "Dockerfile" 
+
+[http_service]
+  internal_port = 8080 # The port your backend API container exposes
+  force_https = true
+  auto_stop_machines = "off"
+  auto_start_machines = false
+  min_machines_running = 1
+  processes = ["app"]
+
+[http_service.concurrency]
+  type = "connections"
+  hard_limit = 250
+  soft_limit = 200
+
+[env]
+  # Safe, non-sensitive environment variables go here.
+  # Do NOT put your Supabase database URL here.
+  NODE_ENV = "production"
