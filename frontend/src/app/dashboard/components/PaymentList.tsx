@@ -207,7 +207,12 @@ export default function PaymentList() {
 
   const handlePaymentClick = (family: EnrolledFamilyPayment) => {
     setSelectedFamily(family);
-    setPaymentAmountDue(family.amount_due?.toString() || (family.enrolled_count * 80).toString());
+    const calcTuition = (count: number, dioceseId?: string | null) => {
+      if (dioceseId && dioceseId.toLowerCase().includes('nx')) return count * 225;
+      const schedule: Record<number, number> = { 1: 125, 2: 250, 3: 315 };
+      return count > 0 ? (schedule[count] ?? 375) : 0;
+    };
+    setPaymentAmountDue(family.amount_due?.toString() || calcTuition(family.enrolled_count, family.diocese_id).toString());
     setPaymentAmountPaid(family.amount_paid?.toString() || '');
     setPaymentMethod('cash');
     setIsPaymentModalOpen(true);

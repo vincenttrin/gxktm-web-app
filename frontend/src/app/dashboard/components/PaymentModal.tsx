@@ -27,7 +27,13 @@ export default function PaymentModal({
   // Form state
   const [amountDue, setAmountDue] = useState<string>(
     family.payment_status?.amount_due?.toString() ||
-    (family.enrolled_class_count ? (family.enrolled_class_count * 80).toString() : '')
+    (family.enrolled_class_count ? (() => {
+      const count = family.enrolled_class_count!;
+      const dioceseId = (family as any).diocese_id || '';
+      if (dioceseId.toLowerCase().includes('nx')) return (count * 225).toString();
+      const schedule: Record<number, number> = { 1: 125, 2: 250, 3: 315 };
+      return (count > 0 ? (schedule[count] ?? 375) : 0).toString();
+    })() : '')
   );
   const [amountPaid, setAmountPaid] = useState<string>(
     family.payment_status?.amount_paid?.toString() || ''
