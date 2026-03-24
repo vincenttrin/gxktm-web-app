@@ -28,6 +28,20 @@ export function ConfirmationStep() {
     };
   });
 
+  // Calculate tuition fee — only count students actually enrolled in classes
+  const enrolledCount = children.filter(child => {
+    const selection = classSelections.find(s => s.student_id === child.id);
+    return selection && (selection.giao_ly_level !== null || selection.viet_ngu_level !== null);
+  }).length;
+  const dioceseId = family.diocese_id || '';
+  const isExternalDiocese = dioceseId.toLowerCase().includes('nx');
+  const tuitionFee = (() => {
+    if (enrolledCount === 0) return 0;
+    if (isExternalDiocese) return enrolledCount * 225;
+    const schedule: Record<number, number> = { 1: 125, 2: 250, 3: 315 };
+    return schedule[enrolledCount] ?? 375;
+  })();
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" style={{ margin: 0 }}>
       <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -77,10 +91,33 @@ export function ConfirmationStep() {
                           Việt Ngữ: {student.vietNgu}
                         </span>
                       )}
+                      {!student.giaoLy && !student.vietNgu && (
+                        <span className="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-sm font-medium text-gray-600">
+                          {t('wizard.classSelection.notEnrolling')}
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+
+          {/* Tuition Fee Summary */}
+          <div className="bg-emerald-50 rounded-xl border border-emerald-200 p-6">
+            <h3 className="text-lg font-semibold text-emerald-900 mb-3">{t('wizard.confirmation.tuitionSummary')}</h3>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-emerald-800">
+                  {t('wizard.confirmation.studentsEnrolled', { count: enrolledCount })}
+                  {isExternalDiocese && (
+                    <span className="ml-2 inline-flex items-center rounded-full bg-purple-100 px-2.5 py-0.5 text-xs font-medium text-purple-800">
+                      {t('wizard.confirmation.externalDiocese')}
+                    </span>
+                  )}
+                </p>
+              </div>
+              <p className="text-2xl font-bold text-emerald-900">${tuitionFee.toFixed(2)}</p>
             </div>
           </div>
 
@@ -137,7 +174,7 @@ export function ConfirmationStep() {
           {/* Action Button */}
           <div className="flex justify-center pt-4">
             <Link
-              href={process.env.NEXT_PUBLIC_HOME_URL || '/'}
+              href={process.env.NEXT_PUBLIC_HOME_URL ? (process.env.NEXT_PUBLIC_HOME_URL.startsWith('http') ? process.env.NEXT_PUBLIC_HOME_URL : `https://${process.env.NEXT_PUBLIC_HOME_URL}`) : '/'}
               className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-8 py-3 text-sm font-medium text-white shadow-sm hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all"
             >
               <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

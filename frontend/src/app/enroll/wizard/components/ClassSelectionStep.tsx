@@ -147,13 +147,8 @@ export function ClassSelectionStep() {
     updateClassSelections(updatedSelections);
   };
   
-  // Check if at least one program is selected for each student
-  const canContinue = currentSelections.every(selection => 
-    selection.giao_ly_level !== null || 
-    selection.viet_ngu_level !== null ||
-    selection.giao_ly_completed ||
-    selection.viet_ngu_completed
-  );
+  // Allow continuing even if some students are not enrolling in any classes
+  const canContinue = currentSelections.length === children.length;
   
   return (
     <div className="space-y-6">
@@ -388,7 +383,7 @@ export function ClassSelectionStep() {
                       </span>
                     )}
                     {!selection.giao_ly_level && !selection.viet_ngu_level && !selection.giao_ly_completed && !selection.viet_ngu_completed && (
-                      <span className="text-red-600">{t('wizard.classSelection.noClassesSelected')}</span>
+                      <span className="text-gray-500">{t('wizard.classSelection.notEnrolling')}</span>
                     )}
                     {(selection.giao_ly_completed || selection.viet_ngu_completed) && !selection.giao_ly_level && !selection.viet_ngu_level && (
                       <span className="text-gray-500">{t('wizard.classSelection.completedPrograms')}</span>
@@ -400,23 +395,6 @@ export function ClassSelectionStep() {
           );
         })}
       </div>
-      
-      {/* Validation Warning */}
-      {!canContinue && (
-        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-          <div className="flex items-start gap-3">
-            <svg className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-            </svg>
-            <div>
-              <p className="text-sm font-medium text-amber-900">{t('wizard.classSelection.classSelectionRequired')}</p>
-              <p className="text-sm text-amber-700 mt-1">
-                {t('wizard.classSelection.classSelectionRequiredDesc')}
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
       
       {/* Navigation */}
       <WizardNavigation

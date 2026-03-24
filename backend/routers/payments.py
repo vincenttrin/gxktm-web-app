@@ -264,7 +264,14 @@ async def get_enrolled_families(
         )
         
         # Calculate amount_due: use existing payment amount_due, or calculate from enrollment
-        calculated_amount_due = enrolled_count * 80.0
+        # External diocese (diocese_id contains 'nx') pays $225 per student, no discounts
+        # Regular families: 1=$125, 2=$250, 3=$315, 4+=$375
+        diocese_id = family.diocese_id or ""
+        if "nx" in diocese_id.lower():
+            calculated_amount_due = enrolled_count * 225.0
+        else:
+            TUITION_SCHEDULE = {1: 125.0, 2: 250.0, 3: 315.0}
+            calculated_amount_due = TUITION_SCHEDULE.get(enrolled_count, 375.0) if enrolled_count > 0 else 0.0
         amount_due = float(payment.amount_due) if payment and payment.amount_due else calculated_amount_due
 
         enrolled_family_items.append(EnrolledFamilyPayment(
