@@ -1,7 +1,9 @@
 services:
   # Python Backend Service
   backend:
-    build: ./backend
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
     container_name: gxktm_backend
     ports:
       - "8000:8000"
@@ -12,7 +14,9 @@ services:
 
   # Next.js Frontend Service
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
     container_name: gxktm_frontend
     ports:
       - "3000:3000"
