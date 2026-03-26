@@ -13,6 +13,7 @@ import {
 import { createClient } from '@/utils/supabase/client';
 import { getSchoolYears, getAcademicYears } from '@/lib/api';
 import { useTranslation, LanguageToggle } from '@/lib/i18n';
+import { SchoolYearStatus } from '@/types/family';
 
 // Unified year type that works with both SchoolYear and AcademicYear
 export interface DisplayYear {
@@ -20,7 +21,7 @@ export interface DisplayYear {
   name: string;
   is_current: boolean;
   is_active?: boolean;
-  status?: string;
+  status?: SchoolYearStatus;
   school_year_id?: number;  // If from SchoolYear model
 }
 

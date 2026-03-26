@@ -69,7 +69,7 @@ export default function DashboardPage() {
         {activeTab === 'classes' && <ClassList selectedYear={selectedYear} />}
         {activeTab === 'payments' && (
           <div className="p-6">
-            <PaymentList selectedYear={selectedYear} />
+            <PaymentList />
           </div>
         )}
         {activeTab === 'school-years' && <SchoolYearManagement />}
