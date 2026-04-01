@@ -127,6 +127,9 @@ export function ConfirmationStep() {
             <p className="text-sm text-red-800 font-medium">
               {t('wizard.confirmation.notFinalizedUntilPayment')}
             </p>
+            <p className="text-sm text-red-800 mt-2">
+              {t('wizard.confirmation.acceptedPaymentMethods')}
+            </p>
           </div>
 
           {/* What's Next */}

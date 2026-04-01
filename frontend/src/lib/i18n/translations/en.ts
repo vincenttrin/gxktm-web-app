@@ -211,6 +211,10 @@ const en = {
       noCoursesRecorded: 'No courses recorded for this academic year yet.',
       backToEmergency: 'Back to Emergency Contacts',
       reviewEnrollment: 'Review Enrollment',
+      autoPromoted: 'Auto-promoted from Level {level}',
+      programCompleted: '{program} — Completed (Level 9)',
+      lockedSelection: 'Class automatically assigned based on previous enrollment.',
+      graduatedNoEnrollment: 'This student has completed Level 9 and does not need to re-enroll in this program.',
     },
 
     // Review Step
@@ -247,6 +251,7 @@ const en = {
       externalDiocese: 'External Diocese',
       important: 'Important',
       notFinalizedUntilPayment: 'Your enrollment is not finalized until payment is received.',
+      acceptedPaymentMethods: 'We accept cash, checks, and Zelle.',
       whatsNext: "What's Next?",
       completePayment: 'Complete payment',
       completePaymentDesc: '– Tuition payment information will be sent separately. Your enrollment is not finalized until payment is received. Payment is due before the first day of class.',

@@ -213,6 +213,10 @@ const vi: TranslationKeys = {
       noCoursesRecorded: 'Chưa có khóa học nào được ghi nhận cho năm học này.',
       backToEmergency: 'Quay Lại Liên Hệ Khẩn Cấp',
       reviewEnrollment: 'Xem Lại Ghi Danh',
+      autoPromoted: 'Tự động lên từ Lớp {level}',
+      programCompleted: '{program} — Hoàn Thành (Lớp 9)',
+      lockedSelection: 'Lớp được tự động chỉ định dựa trên ghi danh trước đó.',
+      graduatedNoEnrollment: 'Học sinh đã hoàn thành Lớp 9 và không cần ghi danh lại chương trình này.',
     },
 
     // Review Step
@@ -249,6 +253,7 @@ const vi: TranslationKeys = {
       externalDiocese: 'Giáo Phận Ngoài',
       important: 'Quan Trọng',
       notFinalizedUntilPayment: 'Ghi danh chưa hoàn tất cho đến khi nhận được thanh toán.',
+      acceptedPaymentMethods: 'Chúng tôi chấp nhận tiền mặt, chi phiếu (check), và Zelle.',
       whatsNext: 'Bước Tiếp Theo?',
       completePayment: 'Hoàn tất thanh toán',
       completePaymentDesc: '– Thông tin thanh toán học phí sẽ được gửi riêng. Ghi danh chưa hoàn tất cho đến khi nhận được thanh toán. Thanh toán phải được thực hiện trước ngày khai giảng.',

@@ -7,7 +7,7 @@ primary_region = "ord"
 [build.args]
   NEXT_PUBLIC_SUPABASE_URL = "https://zncgxjgxbvzwdukgatnn.supabase.co"
   NEXT_PUBLIC_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpuY2d4amd4YnZ6d2R1a2dhdG5uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY5NTc5MDcsImV4cCI6MjA4MjUzMzkwN30.AEXvMW_GI4fZ3V_o6rFfo5HLGUDcWnOlCP-hamTbgpU"
-  NEXT_PUBLIC_CONTACT_EMAIL = "vince.trinh80@gmail.com"
+  NEXT_PUBLIC_CONTACT_EMAIL = "Theresanganbl@gmail.com"
   NEXT_PUBLIC_HOME_URL = "gxktm.org"
   NEXT_PUBLIC_API_URL = "https://gxktm-backend.fly.dev"
 

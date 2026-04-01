@@ -92,6 +92,7 @@ export default function EnrollmentWizardPage() {
           
           // Get suggested enrollments with grade progression
           const suggestions = await getSuggestedEnrollments(lookupResult.family_id);
+          console.log('[Wizard] API suggested_enrollments:', JSON.stringify(suggestions.suggested_enrollments, null, 2));
           setSuggestedEnrollments(suggestions.suggested_enrollments);
         } else {
           // New family - set up empty family structure

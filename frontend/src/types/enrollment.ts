@@ -53,6 +53,8 @@ export interface StudentEnrollmentSuggestion {
   student_id: string;
   student_name: string;
   suggested_classes: SuggestedClass[];
+  is_currently_enrolled: boolean;
+  completed_programs: string[];
 }
 
 // Suggested enrollments response
@@ -109,15 +111,6 @@ export interface EnrollmentFamily {
   guardians: EnrollmentGuardian[];
   students: EnrollmentStudent[];
   emergency_contacts: EnrollmentEmergencyContact[];
-}
-
-// Selected enrollment for a student
-export interface SelectedEnrollment {
-  student_id: string;
-  class_id: string;
-  class_name: string;
-  program_name: string | null;
-  is_auto_suggested: boolean;
 }
 
 // Enrollment wizard state
