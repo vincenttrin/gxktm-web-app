@@ -165,6 +165,7 @@ const en = {
       relationship: 'Relationship',
       selectRelationship: 'Select relationship',
       phoneNumber: 'Phone Number',
+      phoneNumberRequired: 'Phone number is required to save this contact.',
       emailAddress: 'Email Address',
       relationships: {
         aunt: 'Aunt',
@@ -211,6 +212,10 @@ const en = {
       noCoursesRecorded: 'No courses recorded for this academic year yet.',
       backToEmergency: 'Back to Emergency Contacts',
       reviewEnrollment: 'Review Enrollment',
+      autoPromoted: 'Auto-promoted from Level {level}',
+      programCompleted: '{program} — Completed (Level 9)',
+      lockedSelection: 'Class automatically assigned based on previous enrollment.',
+      graduatedNoEnrollment: 'This student has completed Level 9 and does not need to re-enroll in this program.',
     },
 
     // Review Step
@@ -245,8 +250,9 @@ const en = {
       tuitionSummary: 'Registration Fee',
       studentsEnrolled: '{count} student(s) enrolled',
       externalDiocese: 'External Diocese',
-      important: 'Important',
+      important: 'IMPORTANT',
       notFinalizedUntilPayment: 'Your enrollment is not finalized until payment is received.',
+      acceptedPaymentMethods: 'We accept cash, checks, and Zelle.',
       whatsNext: "What's Next?",
       completePayment: 'Complete payment',
       completePaymentDesc: '– Tuition payment information will be sent separately. Your enrollment is not finalized until payment is received. Payment is due before the first day of class.',
@@ -255,6 +261,8 @@ const en = {
       questions: 'Questions?',
       questionsDesc: 'If you have any questions about your enrollment or need to make changes, please contact us:',
       returnToHome: 'Return to Home',
+      zelle: 'Pay with Zelle',
+      zelleInstructions: 'Send payment to our Zelle account at {email}. Please include your family (or students\') name and "Tuition Payment" in the memo.',
     },
   },
 } as const;

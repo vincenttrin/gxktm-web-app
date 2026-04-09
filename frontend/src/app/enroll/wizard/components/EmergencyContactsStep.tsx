@@ -13,14 +13,20 @@ export function EmergencyContactsStep() {
   const contacts = formState.emergencyContacts;
   
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [showSaveValidationErrors, setShowSaveValidationErrors] = useState(false);
   const [editedContact, setEditedContact] = useState<EnrollmentEmergencyContact>({
     name: '',
     email: null,
     phone: '',
     relationship_to_family: null,
   });
+
+  const isEditedNameValid = editedContact.name.trim().length > 0;
+  const isEditedPhoneValid = editedContact.phone.trim().length > 0;
+  const shouldShowPhoneError = showSaveValidationErrors && !isEditedPhoneValid;
   
   const handleAddNew = () => {
+    setShowSaveValidationErrors(false);
     setEditedContact({
       name: '',
       email: null,
@@ -31,11 +37,17 @@ export function EmergencyContactsStep() {
   };
   
   const handleEdit = (index: number) => {
+    setShowSaveValidationErrors(false);
     setEditedContact({ ...contacts[index] });
     setEditingIndex(index);
   };
   
   const handleSave = () => {
+    if (!isEditedNameValid || !isEditedPhoneValid) {
+      setShowSaveValidationErrors(true);
+      return;
+    }
+
     const updatedContacts = [...contacts];
     
     if (editingIndex === -1) {
@@ -48,10 +60,12 @@ export function EmergencyContactsStep() {
     }
     
     updateFormEmergencyContacts(updatedContacts);
+    setShowSaveValidationErrors(false);
     setEditingIndex(null);
   };
   
   const handleCancel = () => {
+    setShowSaveValidationErrors(false);
     setEditingIndex(null);
   };
   
@@ -110,7 +124,7 @@ export function EmergencyContactsStep() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        {t('wizard.emergencyContacts.fullName')} *
+                        {t('wizard.emergencyContacts.fullName')} <span className="text-red-500">*</span>
                       </label>
                       <input
                         type="text"
@@ -148,16 +162,24 @@ export function EmergencyContactsStep() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        {t('wizard.emergencyContacts.phoneNumber')} *
+                        {t('wizard.emergencyContacts.phoneNumber')} <span className="text-red-500">*</span>
                       </label>
                       <input
                         type="tel"
                         value={editedContact.phone}
                         onChange={(e) => setEditedContact({ ...editedContact, phone: e.target.value })}
-                        className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-20 transition-all"
-                        placeholder="(555) 123-4567"
                         required
+                        aria-required="true"
+                        aria-invalid={shouldShowPhoneError}
+                        aria-describedby={shouldShowPhoneError ? 'emergency-contact-phone-error' : undefined}
+                        className={`block w-full rounded-lg border px-3 py-2 text-gray-900 placeholder-gray-400 transition-all ${shouldShowPhoneError ? 'border-red-300 bg-red-50 focus:border-red-500 focus:ring-2 focus:ring-red-500 focus:ring-opacity-20' : 'border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-20'}`}
+                        placeholder="(555) 123-4567"
                       />
+                      {shouldShowPhoneError && (
+                        <p id="emergency-contact-phone-error" className="mt-1 text-xs text-red-600">
+                          {t('wizard.emergencyContacts.phoneNumberRequired')}
+                        </p>
+                      )}
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -180,8 +202,8 @@ export function EmergencyContactsStep() {
                   <div className="flex gap-3">
                     <button
                       onClick={handleSave}
-                      disabled={!editedContact.name.trim() || !editedContact.phone.trim()}
-                      className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                      disabled={!isEditedNameValid}
+                      className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-all"
                     >
                       <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -253,7 +275,7 @@ export function EmergencyContactsStep() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      {t('wizard.emergencyContacts.fullName')} *
+                      {t('wizard.emergencyContacts.fullName')} <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
@@ -291,16 +313,24 @@ export function EmergencyContactsStep() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      {t('wizard.emergencyContacts.phoneNumber')} *
+                      {t('wizard.emergencyContacts.phoneNumber')} <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="tel"
                       value={editedContact.phone}
                       onChange={(e) => setEditedContact({ ...editedContact, phone: e.target.value })}
-                      className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-20 transition-all"
-                      placeholder="(555) 123-4567"
                       required
+                      aria-required="true"
+                      aria-invalid={shouldShowPhoneError}
+                      aria-describedby={shouldShowPhoneError ? 'emergency-contact-phone-error' : undefined}
+                      className={`block w-full rounded-lg border px-3 py-2 text-gray-900 placeholder-gray-400 transition-all ${shouldShowPhoneError ? 'border-red-300 bg-red-50 focus:border-red-500 focus:ring-2 focus:ring-red-500 focus:ring-opacity-20' : 'border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-20'}`}
+                      placeholder="(555) 123-4567"
                     />
+                    {shouldShowPhoneError && (
+                      <p id="emergency-contact-phone-error" className="mt-1 text-xs text-red-600">
+                        {t('wizard.emergencyContacts.phoneNumberRequired')}
+                      </p>
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -323,8 +353,8 @@ export function EmergencyContactsStep() {
                 <div className="flex gap-3">
                   <button
                     onClick={handleSave}
-                    disabled={!editedContact.name.trim() || !editedContact.phone.trim()}
-                    className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                    disabled={!isEditedNameValid}
+                    className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-all"
                   >
                     <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />

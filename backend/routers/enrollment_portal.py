@@ -55,27 +55,28 @@ def try_parse_uuid(id_str: Optional[str]) -> Optional[UUID]:
 def parse_class_level(class_name: str) -> Optional[int]:
     """
     Extract the numeric level from a class name.
-    E.g., "Giao Ly 3" -> 3, "Viet Ngu 5" -> 5
+    E.g., "Giao Ly 3A" -> 3, "Viet Ngu 5" -> 5
     Returns None if no number found.
     """
-    match = re.search(r'(\d+)$', class_name.strip())
+    match = re.search(r'\d+', class_name)
     if match:
-        return int(match.group(1))
+        return int(match.group())
     return None
 
 
 def get_next_class_name(class_name: str) -> Optional[str]:
     """
     Get the next level class name for grade progression.
-    E.g., "Giao Ly 3" -> "Giao Ly 4", "Viet Ngu 5" -> "Viet Ngu 6"
+    E.g., "Giao Ly 3" -> "Giao Ly 4", "Giao Ly 1A" -> "Giao Ly 2"
     Returns None if the class is at max level (9) or no level found.
+    Strips any letter suffix (e.g., "A", "B") when generating the next name.
     """
     level = parse_class_level(class_name)
     if level is None or level >= 9:
         return None
-    
-    # Replace the number at the end with the next level
-    return re.sub(r'\d+$', str(level + 1), class_name.strip())
+
+    # Replace the number (and any trailing letters) at the end with the next level
+    return re.sub(r'\d+[A-Za-z]*$', str(level + 1), class_name.strip())
 
 
 async def get_active_or_latest_academic_year(db: AsyncSession) -> AcademicYear:
@@ -286,13 +287,17 @@ async def get_suggested_enrollments(
     """
     current_year = await get_active_or_latest_academic_year(db)
     
-    # Get all classes for current year (for matching)
+    # Get all classes for current year, indexed by (program_id, level)
     classes_result = await db.execute(
         select(Class)
         .options(selectinload(Class.program))
         .where(Class.academic_year_id == current_year.id)
     )
-    current_classes = {cls.name: cls for cls in classes_result.scalars().all()}
+    current_classes_by_program_level: dict[tuple[int, int], Class] = {}
+    for cls in classes_result.scalars().all():
+        level = parse_class_level(cls.name)
+        if level is not None and cls.program_id is not None:
+            current_classes_by_program_level[(cls.program_id, level)] = cls
     
     # Get family's students with their last year's enrollments
     family_result = await db.execute(
@@ -310,46 +315,73 @@ async def get_suggested_enrollments(
     if not family:
         raise HTTPException(status_code=404, detail="Family not found")
     
+    logger.warning(f"[suggested-enrollments] current_year={current_year.name} (id={current_year.id})")
+    logger.warning(f"[suggested-enrollments] current_classes (program_id, level): {list(current_classes_by_program_level.keys())}")
+
     suggested_enrollments = []
-    
+
     for student in family.students:
-        student_suggestions = {
-            "student_id": str(student.id),
-            "student_name": f"{student.first_name} {student.last_name}",
-            "suggested_classes": [],
-        }
-        
+        logger.warning(f"[suggested-enrollments] student={student.first_name} {student.last_name} (id={student.id}), total enrollments={len(student.enrollments)}")
+
         # Get last year's enrollments (enrollments NOT in current year)
         last_year_enrollments = [
-            e for e in student.enrollments 
+            e for e in student.enrollments
             if e.assigned_class and e.assigned_class.academic_year_id != current_year.id
         ]
-        
+
+        logger.warning(f"[suggested-enrollments]   last_year_enrollments count={len(last_year_enrollments)}")
+        for e in student.enrollments:
+            cls = e.assigned_class
+            logger.warning(f"[suggested-enrollments]   enrollment: class={cls.name if cls else 'None'}, academic_year_id={cls.academic_year_id if cls else 'None'}, matches_current={cls.academic_year_id == current_year.id if cls else 'N/A'}")
+
+        is_currently_enrolled = len(last_year_enrollments) > 0
+        completed_programs = []
+        suggested_classes = []
+
         for enrollment in last_year_enrollments:
             old_class = enrollment.assigned_class
             if not old_class:
                 continue
-            
+
             old_class_name = old_class.name
             old_level = parse_class_level(old_class_name)
-            
-            # Skip if already at max level (9)
+            program_id = old_class.program_id
+            program_name = old_class.program.name if old_class.program else None
+
+            logger.warning(f"[suggested-enrollments]   processing: old_class={old_class_name}, old_level={old_level}, program={program_name} (id={program_id})")
+
+            # If already at max level (9), mark program as completed
             if old_level == 9:
+                if program_name and program_name not in completed_programs:
+                    completed_programs.append(program_name)
+                logger.warning(f"[suggested-enrollments]   -> level 9, marking {program_name} as completed")
                 continue
-            
-            # Get the next class name
-            next_class_name = get_next_class_name(old_class_name)
-            
-            if next_class_name and next_class_name in current_classes:
-                next_class = current_classes[next_class_name]
-                student_suggestions["suggested_classes"].append({
+
+            if old_level is None or old_level >= 9 or program_id is None:
+                continue
+
+            # Look up next level class by program + level
+            next_level = old_level + 1
+            next_class = current_classes_by_program_level.get((program_id, next_level))
+            logger.warning(f"[suggested-enrollments]   -> looking up ({program_id}, {next_level}), found={next_class.name if next_class else None}")
+
+            if next_class:
+                suggested_classes.append({
                     "class_id": str(next_class.id),
                     "class_name": next_class.name,
                     "program_name": next_class.program.name if next_class.program else None,
                     "previous_class_name": old_class_name,
                     "is_auto_suggested": True,
                 })
-        
+
+        student_suggestions = {
+            "student_id": str(student.id),
+            "student_name": f"{student.first_name} {student.last_name}",
+            "suggested_classes": suggested_classes,
+            "is_currently_enrolled": is_currently_enrolled,
+            "completed_programs": completed_programs,
+        }
+
         suggested_enrollments.append(student_suggestions)
     
     return {
@@ -611,8 +643,7 @@ async def submit_enrollment(
             .where(Class.academic_year_id == request.academic_year_id)
         )
         current_year_classes = classes_result.scalars().all()
-        class_name_to_id = {cls.name: cls.id for cls in current_year_classes}
-        
+
         # Build program name to class map for level lookup
         giao_ly_classes = {}
         viet_ngu_classes = {}
