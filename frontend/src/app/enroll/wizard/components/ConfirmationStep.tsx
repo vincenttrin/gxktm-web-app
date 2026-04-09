@@ -59,6 +59,17 @@ export function ConfirmationStep() {
             </p>
           </div>
 
+          {/* Important Notice */}
+          <div className="bg-red-50 rounded-xl border border-red-200 p-6">
+            <h3 className="text-lg font-semibold text-red-900 mb-2">{t('wizard.confirmation.important')}</h3>
+            <p className="text-sm text-red-800 font-medium">
+              {t('wizard.confirmation.notFinalizedUntilPayment')}
+            </p>
+            <p className="text-sm text-red-800 mt-2">
+              {t('wizard.confirmation.acceptedPaymentMethods')}
+            </p>
+          </div>
+
           {/* Enrollment Summary */}
           <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
             <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
@@ -121,17 +132,6 @@ export function ConfirmationStep() {
             </div>
           </div>
 
-          {/* Important Notice */}
-          <div className="bg-red-50 rounded-xl border border-red-200 p-6">
-            <h3 className="text-lg font-semibold text-red-900 mb-2">{t('wizard.confirmation.important')}</h3>
-            <p className="text-sm text-red-800 font-medium">
-              {t('wizard.confirmation.notFinalizedUntilPayment')}
-            </p>
-            <p className="text-sm text-red-800 mt-2">
-              {t('wizard.confirmation.acceptedPaymentMethods')}
-            </p>
-          </div>
-
           {/* What's Next */}
           <div className="bg-blue-50 rounded-xl border border-blue-200 p-6">
             <h3 className="text-lg font-semibold text-blue-900 mb-4">{t('wizard.confirmation.whatsNext')}</h3>
@@ -153,6 +153,14 @@ export function ConfirmationStep() {
                 </p>
               </li>
             </ul>
+          </div>
+
+          {/* Zelle Instructions */}
+          <div className="bg-purple-50 rounded-xl border border-purple-200 p-6">
+            <h3 className="text-lg font-semibold text-purple-900 mb-4">{t('wizard.confirmation.zelle')}</h3>
+            <p className="text-sm text-purple-800">
+              {t('wizard.confirmation.zelleInstructions', { email: 'khoigiaoduc3@gmail.com' })}
+            </p>
           </div>
 
           {/* Contact Information */}

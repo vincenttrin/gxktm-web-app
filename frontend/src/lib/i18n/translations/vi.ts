@@ -167,6 +167,7 @@ const vi: TranslationKeys = {
       relationship: 'Quan Hệ',
       selectRelationship: 'Chọn quan hệ',
       phoneNumber: 'Số Điện Thoại',
+      phoneNumberRequired: 'Cần nhập số điện thoại để lưu liên hệ này.',
       emailAddress: 'Địa Chỉ Email',
       relationships: {
         aunt: 'Dì/Cô',
@@ -251,7 +252,7 @@ const vi: TranslationKeys = {
       tuitionSummary: 'Phí Ghi Danh',
       studentsEnrolled: '{count} học sinh ghi danh',
       externalDiocese: 'Giáo Phận Ngoài',
-      important: 'Quan Trọng',
+      important: 'QUAN TRỌNG',
       notFinalizedUntilPayment: 'Ghi danh chưa hoàn tất cho đến khi nhận được thanh toán.',
       acceptedPaymentMethods: 'Chúng tôi chấp nhận tiền mặt, chi phiếu (check), và Zelle.',
       whatsNext: 'Bước Tiếp Theo?',
@@ -262,6 +263,8 @@ const vi: TranslationKeys = {
       questions: 'Câu Hỏi?',
       questionsDesc: 'Nếu bạn có bất kỳ câu hỏi nào về ghi danh hoặc cần thay đổi, vui lòng liên hệ chúng tôi:',
       returnToHome: 'Về Trang Chủ',
+      zelle: 'Thanh toán qua Zelle',
+      zelleInstructions: 'Gửi thanh toán đến tài khoản Zelle của chúng tôi tại {email}. Vui lòng bao gồm tên gia đình (hoặc tên học sinh) và "Thanh Toán Học Phí" trong phần memo.',
     },
   },
 } as const;
