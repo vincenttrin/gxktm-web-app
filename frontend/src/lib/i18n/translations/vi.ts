@@ -255,6 +255,7 @@ const vi: TranslationKeys = {
       important: 'QUAN TRỌNG',
       notFinalizedUntilPayment: 'Ghi danh chưa hoàn tất cho đến khi nhận được thanh toán.',
       acceptedPaymentMethods: 'Chúng tôi chấp nhận tiền mặt, chi phiếu (check), và Zelle.',
+      refundPolicy: 'Tất cả các yêu cầu hoàn tiền phải được gửi trước ngày 1 tháng 7 năm 2026. Liên hệ Ngan Hoang tại theresenganbl@gmail.com hoặc 402-904-2247.',
       whatsNext: 'Bước Tiếp Theo?',
       completePayment: 'Hoàn tất thanh toán',
       completePaymentDesc: '– Thông tin thanh toán học phí sẽ được gửi riêng. Ghi danh chưa hoàn tất cho đến khi nhận được thanh toán. Thanh toán phải được thực hiện trước ngày khai giảng.',

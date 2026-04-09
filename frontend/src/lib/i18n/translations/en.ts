@@ -253,6 +253,7 @@ const en = {
       important: 'IMPORTANT',
       notFinalizedUntilPayment: 'Your enrollment is not finalized until payment is received.',
       acceptedPaymentMethods: 'We accept cash, checks, and Zelle.',
+      refundPolicy: 'All refunds must be requested before July 1, 2026. Contact Ngan Hoang at theresenganbl@gmail.com or 402-904-2247.',
       whatsNext: "What's Next?",
       completePayment: 'Complete payment',
       completePaymentDesc: '– Tuition payment information will be sent separately. Your enrollment is not finalized until payment is received. Payment is due before the first day of class.',
