@@ -68,6 +68,9 @@ export function ConfirmationStep() {
             <p className="text-sm text-red-800 mt-2">
               {t('wizard.confirmation.acceptedPaymentMethods')}
             </p>
+            <p className="text-sm text-red-800 mt-2">
+              {t('wizard.confirmation.refundPolicy')}
+            </p>
           </div>
 
           {/* Enrollment Summary */}
