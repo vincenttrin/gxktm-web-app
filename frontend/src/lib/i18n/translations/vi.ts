@@ -241,6 +241,7 @@ const vi: TranslationKeys = {
       existingFamilyNote: 'Điều này sẽ cập nhật ghi danh hiện tại và thay thế bất kỳ đơn gửi trước đó cho năm này.',
       newFamilyNote: 'Điều này sẽ tạo đơn ghi danh mới cho gia đình bạn.',
       confirmAndSubmit: 'Xác Nhận & Gửi',
+      parentalConsentMessage: 'Cần có sự đồng ý của phụ huynh trước khi bạn có thể gửi đăng ký này.',
     },
 
     // Confirmation Step

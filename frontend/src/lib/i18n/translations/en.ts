@@ -239,6 +239,7 @@ const en = {
       existingFamilyNote: 'This will update your existing enrollment and replace any previous submission for this year.',
       newFamilyNote: 'This will create a new enrollment for your family.',
       confirmAndSubmit: 'Confirm & Submit',
+      parentalConsentMessage: 'Parental consent is required before you can submit this registration.',
     },
 
     // Confirmation Step
