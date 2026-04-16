@@ -75,6 +75,7 @@ export function ReviewStep() {
             viet_ngu_level: s.viet_ngu_level,
             giao_ly_completed: s.giao_ly_completed,
             viet_ngu_completed: s.viet_ngu_completed,
+            register_for_tntt: s.register_for_tntt,
           })),
         academic_year_id: academicYear.id,
       };
@@ -97,9 +98,9 @@ export function ReviewStep() {
   
   // Helper to get class selection summary for a child
   const getEnrollmentSummary = (studentId: string | undefined) => {
-    if (!studentId) return { giaoLy: null, vietNgu: null };
+    if (!studentId) return { giaoLy: null, vietNgu: null, tntt: false };
     const selection = classSelections.find(s => s.student_id === studentId);
-    if (!selection) return { giaoLy: null, vietNgu: null };
+    if (!selection) return { giaoLy: null, vietNgu: null, tntt: false };
     
     return {
       giaoLy: selection.giao_ly_completed 
@@ -112,6 +113,7 @@ export function ReviewStep() {
         : selection.viet_ngu_level 
           ? `Level ${selection.viet_ngu_level}` 
           : null,
+      tntt: selection.register_for_tntt,
     };
   };
   
@@ -267,7 +269,12 @@ export function ReviewStep() {
                         Việt Ngữ: {enrollment.vietNgu}
                       </span>
                     )}
-                    {!enrollment.giaoLy && !enrollment.vietNgu && (
+                    {enrollment.tntt && (
+                      <span className="inline-flex items-center rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-medium text-indigo-800">
+                        TNTT
+                      </span>
+                    )}
+                    {!enrollment.giaoLy && !enrollment.vietNgu && !enrollment.tntt && (
                       <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600">
                         {t('wizard.review.noEnrollment')}
                       </span>

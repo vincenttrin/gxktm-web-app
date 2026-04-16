@@ -659,6 +659,8 @@ async def submit_enrollment(
         viet_ngu_classes = {}
         giao_ly_class_names = {}
         viet_ngu_class_names = {}
+        tntt_class_id: Optional[UUID] = None
+        tntt_class_name: Optional[str] = None
         for cls in current_year_classes:
             if cls.program:
                 level = parse_class_level(cls.name)
@@ -670,6 +672,13 @@ async def submit_enrollment(
                     elif "viet ngu" in program_name or "việt ngữ" in program_name:
                         viet_ngu_classes[level] = cls.id
                         viet_ngu_class_names[level] = cls.name
+                if (
+                    "tntt" in program_name
+                    and cls.name.strip().lower() == "tntt"
+                    and tntt_class_id is None
+                ):
+                    tntt_class_id = cls.id
+                    tntt_class_name = cls.name
         
         if not giao_ly_classes and not viet_ngu_classes:
             logger.warning(
@@ -724,6 +733,21 @@ async def submit_enrollment(
                 )
                 db.add(enrollment)
                 enrollment_ids.append(enrollment.id)
+
+            if selection.register_for_tntt:
+                if tntt_class_id:
+                    enrollment = Enrollment(
+                        id=uuid4(),
+                        student_id=student_id,
+                        class_id=tntt_class_id,
+                    )
+                    db.add(enrollment)
+                    enrollment_ids.append(enrollment.id)
+                else:
+                    logger.warning(
+                        "TNTT enrollment requested but TNTT class not found for academic year %s",
+                        request.academic_year_id,
+                    )
         
         # Commit all changes
         await db.commit()
@@ -755,6 +779,8 @@ async def submit_enrollment(
                         f"Việt Ngữ {selection.viet_ngu_level}",
                     )
                 )
+            if selection and selection.register_for_tntt:
+                courses.append(tntt_class_name or "TNTT")
 
             student_summaries.append(
                 {
@@ -778,6 +804,7 @@ async def submit_enrollment(
                 else None,
                 "giao_ly_completed": selection.giao_ly_completed,
                 "viet_ngu_completed": selection.viet_ngu_completed,
+                "register_for_tntt": selection.register_for_tntt,
             }
             for selection in request.class_selections
         ]

@@ -47,11 +47,16 @@ export default async function SignupPage(props: {
                 name="password"
                 type="password"
                 required
+                minLength={6}
                 className="relative block w-full rounded-b-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6 px-3"
                 placeholder="Password"
               />
             </div>
           </div>
+
+          <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded-md border border-gray-200">
+            Password requirements: at least 6 characters.
+          </p>
 
           <div className="flex flex-col gap-4">
             <SubmitButton

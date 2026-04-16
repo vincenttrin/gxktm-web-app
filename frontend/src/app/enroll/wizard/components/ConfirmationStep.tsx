@@ -25,13 +25,14 @@ export function ConfirmationStep() {
         : selection?.viet_ngu_level
           ? `Level ${selection.viet_ngu_level}`
           : null,
+      tntt: selection?.register_for_tntt ?? false,
     };
   });
 
   // Calculate tuition fee — only count students actually enrolled in classes
   const enrolledCount = children.filter(child => {
     const selection = classSelections.find(s => s.student_id === child.id);
-    return selection && (selection.giao_ly_level !== null || selection.viet_ngu_level !== null);
+    return selection && (selection.giao_ly_level !== null || selection.viet_ngu_level !== null || selection.register_for_tntt);
   }).length;
   const dioceseId = family.diocese_id || '';
   const isExternalDiocese = dioceseId.toLowerCase().includes('nx');
@@ -105,7 +106,12 @@ export function ConfirmationStep() {
                           Việt Ngữ: {student.vietNgu}
                         </span>
                       )}
-                      {!student.giaoLy && !student.vietNgu && (
+                      {student.tntt && (
+                        <span className="inline-flex items-center rounded-full bg-indigo-100 px-3 py-1 text-sm font-medium text-indigo-800">
+                          TNTT
+                        </span>
+                      )}
+                      {!student.giaoLy && !student.vietNgu && !student.tntt && (
                         <span className="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-sm font-medium text-gray-600">
                           {t('wizard.classSelection.notEnrolling')}
                         </span>

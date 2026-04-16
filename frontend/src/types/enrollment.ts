@@ -162,6 +162,7 @@ export interface ClassSelection {
   viet_ngu_level: number | null; // 1-9 or null if not enrolling
   giao_ly_completed: boolean; // true if completed level 9
   viet_ngu_completed: boolean; // true if completed level 9
+  register_for_tntt: boolean;
 }
 
 // Form validation state

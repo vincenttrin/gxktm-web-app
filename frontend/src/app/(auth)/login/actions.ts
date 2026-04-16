@@ -38,6 +38,10 @@ export async function signup(formData: FormData) {
   const email = formData.get('email') as string
   const password = formData.get('password') as string
 
+  if (password.length < 6) {
+    redirect('/signup?error=Password must be at least 6 characters')
+  }
+
   // New users default to 'user' role
   const { error } = await supabase.auth.signUp({
     email,

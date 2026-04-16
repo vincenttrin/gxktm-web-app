@@ -218,6 +218,9 @@ const vi: TranslationKeys = {
       programCompleted: '{program} — Hoàn Thành (Lớp 9)',
       lockedSelection: 'Lớp được tự động chỉ định dựa trên ghi danh trước đó.',
       graduatedNoEnrollment: 'Học sinh đã hoàn thành Lớp 9 và không cần ghi danh lại chương trình này.',
+      tnttRegistration: 'Ghi danh TNTT',
+      tnttDescription: 'Đánh dấu để ghi danh học sinh này vào chương trình TNTT.',
+      tnttShort: 'TNTT',
     },
 
     // Review Step

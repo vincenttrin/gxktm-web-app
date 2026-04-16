@@ -68,6 +68,10 @@ export default async function ResetPasswordPage(props: {
             </div>
           </div>
 
+          <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded-md border border-gray-200">
+            Password requirements: at least 6 characters.
+          </p>
+
           <div>
             <SubmitButton
               formAction={updatePassword}

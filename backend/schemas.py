@@ -331,6 +331,7 @@ class ClassSelectionSubmission(BaseModel):
     viet_ngu_level: Optional[int] = None  # 1-9, None means not enrolling
     giao_ly_completed: bool = False  # True if already completed all levels
     viet_ngu_completed: bool = False  # True if already completed all levels
+    register_for_tntt: bool = False
 
 
 class FamilyInfoSubmission(BaseModel):

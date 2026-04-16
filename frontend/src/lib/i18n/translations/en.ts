@@ -216,6 +216,9 @@ const en = {
       programCompleted: '{program} — Completed (Level 9)',
       lockedSelection: 'Class automatically assigned based on previous enrollment.',
       graduatedNoEnrollment: 'This student has completed Level 9 and does not need to re-enroll in this program.',
+      tnttRegistration: 'Register for TNTT',
+      tnttDescription: 'Check to enroll this child in the TNTT program.',
+      tnttShort: 'TNTT',
     },
 
     // Review Step
