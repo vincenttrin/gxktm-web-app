@@ -30,6 +30,7 @@ from schemas import (
     EnrollmentSubmissionResponse,
 )
 from auth import get_current_user, UserInfo
+from utils.enrollment_notifications import send_enrollment_confirmation_email
 
 router = APIRouter(prefix="/api/enrollment", tags=["enrollment"])
 
@@ -445,6 +446,7 @@ async def submit_enrollment(
     
     try:
         enrollment_ids = []
+        academic_year_name = str(request.academic_year_id)
         
         # 1. Handle Family
         if request.family_id:
@@ -635,6 +637,14 @@ async def submit_enrollment(
                     await db.delete(ec_to_del)
         
         # 5. Handle Class Enrollments
+        academic_year_result = await db.execute(
+            select(AcademicYear).where(AcademicYear.id == request.academic_year_id)
+        )
+        academic_year = academic_year_result.scalar_one_or_none()
+        if not academic_year:
+            raise HTTPException(status_code=404, detail="Academic year not found")
+        academic_year_name = academic_year.name
+
         # First, delete existing enrollments for this academic year
         # Get all classes for the current academic year
         classes_result = await db.execute(
@@ -647,6 +657,8 @@ async def submit_enrollment(
         # Build program name to class map for level lookup
         giao_ly_classes = {}
         viet_ngu_classes = {}
+        giao_ly_class_names = {}
+        viet_ngu_class_names = {}
         for cls in current_year_classes:
             if cls.program:
                 level = parse_class_level(cls.name)
@@ -654,8 +666,10 @@ async def submit_enrollment(
                 if level:
                     if "giao ly" in program_name or "giáo lý" in program_name:
                         giao_ly_classes[level] = cls.id
+                        giao_ly_class_names[level] = cls.name
                     elif "viet ngu" in program_name or "việt ngữ" in program_name:
                         viet_ngu_classes[level] = cls.id
+                        viet_ngu_class_names[level] = cls.name
         
         if not giao_ly_classes and not viet_ngu_classes:
             logger.warning(
@@ -713,6 +727,72 @@ async def submit_enrollment(
         
         # Commit all changes
         await db.commit()
+
+        # Best-effort confirmation email. Enrollment success should not depend on
+        # downstream email availability.
+        guardian_emails = [g.email for g in request.guardians if g.email]
+        selections_by_student_id = {
+            selection.student_id: selection
+            for selection in request.class_selections
+        }
+        student_summaries = []
+        for student in request.students:
+            selection = selections_by_student_id.get(student.id or "")
+            courses = []
+
+            if selection and selection.giao_ly_level:
+                courses.append(
+                    giao_ly_class_names.get(
+                        selection.giao_ly_level,
+                        f"Giáo Lý {selection.giao_ly_level}",
+                    )
+                )
+
+            if selection and selection.viet_ngu_level:
+                courses.append(
+                    viet_ngu_class_names.get(
+                        selection.viet_ngu_level,
+                        f"Việt Ngữ {selection.viet_ngu_level}",
+                    )
+                )
+
+            student_summaries.append(
+                {
+                    "id": student.id,
+                    "first_name": student.first_name,
+                    "last_name": student.last_name,
+                    "vietnamese_name": student.vietnamese_name,
+                    "courses": courses,
+                }
+            )
+        class_selection_summaries = [
+            {
+                "student_id": selection.student_id,
+                "giao_ly_level": selection.giao_ly_level,
+                "giao_ly_class_name": giao_ly_class_names.get(selection.giao_ly_level)
+                if selection.giao_ly_level
+                else None,
+                "viet_ngu_level": selection.viet_ngu_level,
+                "viet_ngu_class_name": viet_ngu_class_names.get(selection.viet_ngu_level)
+                if selection.viet_ngu_level
+                else None,
+                "giao_ly_completed": selection.giao_ly_completed,
+                "viet_ngu_completed": selection.viet_ngu_completed,
+            }
+            for selection in request.class_selections
+        ]
+        email_sent = await send_enrollment_confirmation_email(
+            recipient_emails=guardian_emails,
+            family_name=request.family_info.family_name,
+            academic_year_name=academic_year_name,
+            students=student_summaries,
+            class_selections=class_selection_summaries,
+        )
+        if not email_sent:
+            logger.warning(
+                "Enrollment confirmation email was not sent for family_id=%s",
+                family.id,
+            )
         
         return EnrollmentSubmissionResponse(
             success=True,
