@@ -19,7 +19,7 @@ from sqlalchemy import select, and_
 from sqlalchemy.orm import selectinload
 
 from database import get_db
-from models import Student, Class, Enrollment, Family, Program
+from models import Student, Class, Enrollment, Family, AcademicYear, PaymentStatus
 from schemas import (
     ManualEnrollmentCreate,
     ManualEnrollmentResponse,
@@ -27,10 +27,92 @@ from schemas import (
     BulkEnrollmentResponse,
     StudentEnrollmentInfo,
     ClassResponse,
+    StudentWithEnrollmentStatus,
+    EnrolledClassInfo,
 )
 from auth import require_admin, UserInfo
+from utils.pricing import calculate_base_tuition, calculate_tntt_surcharge
 
 router = APIRouter(prefix="/api/enrollments", tags=["enrollments"])
+
+
+async def _recalculate_family_payments_for_years(
+    db: AsyncSession,
+    family_id: UUID,
+    academic_year_ids: set[int],
+) -> None:
+    if not academic_year_ids:
+        return
+
+    family_result = await db.execute(
+        select(Family)
+        .options(
+            selectinload(Family.students)
+            .selectinload(Student.enrollments)
+            .selectinload(Enrollment.assigned_class)
+            .selectinload(Class.program),
+            selectinload(Family.payments),
+        )
+        .where(Family.id == family_id)
+    )
+    family = family_result.scalar_one_or_none()
+    if not family:
+        return
+
+    year_to_name: dict[int, str] = {}
+    year_result = await db.execute(
+        select(AcademicYear.id, AcademicYear.name).where(AcademicYear.id.in_(academic_year_ids))
+    )
+    for year_id, year_name in year_result.all():
+        year_to_name[year_id] = year_name
+
+    for year_id in academic_year_ids:
+        students_with_status: list[StudentWithEnrollmentStatus] = []
+        enrolled_count = 0
+
+        for student in family.students:
+            enrolled_classes_for_year: list[EnrolledClassInfo] = []
+            for enrollment in student.enrollments:
+                class_obj = enrollment.assigned_class
+                if not class_obj or class_obj.academic_year_id != year_id:
+                    continue
+                enrolled_classes_for_year.append(
+                    EnrolledClassInfo(
+                        id=class_obj.id,
+                        name=class_obj.name,
+                        program_name=class_obj.program.name if class_obj.program else None,
+                    )
+                )
+
+            is_enrolled = len(enrolled_classes_for_year) > 0
+            if is_enrolled:
+                enrolled_count += 1
+
+            students_with_status.append(
+                StudentWithEnrollmentStatus(
+                    id=student.id,
+                    first_name=student.first_name,
+                    last_name=student.last_name,
+                    is_enrolled=is_enrolled,
+                    enrolled_classes=enrolled_classes_for_year,
+                )
+            )
+
+        calculated_amount_due = calculate_base_tuition(enrolled_count, family.diocese_id) + calculate_tntt_surcharge(students_with_status)
+        school_year_name = year_to_name.get(year_id)
+        if not school_year_name:
+            continue
+
+        payment = next((p for p in family.payments if p.school_year == school_year_name), None)
+        if payment:
+            amount_paid = float(payment.amount_paid) if payment.amount_paid else 0.0
+            payment.amount_due = calculated_amount_due
+            if amount_paid >= calculated_amount_due and calculated_amount_due > 0:
+                payment.payment_status = PaymentStatus.PAID.value
+            elif amount_paid > 0:
+                payment.payment_status = PaymentStatus.PARTIAL.value
+            else:
+                payment.payment_status = PaymentStatus.UNPAID.value
 
 
 # --- Get Students with Enrollments ---
@@ -115,6 +197,7 @@ async def manual_enroll_student(
     enrolled_class_ids = []
     already_enrolled_class_ids = []
     replaced_class_ids = []
+    affected_academic_year_ids: set[int] = set()
 
     for class_id in enrollment_data.class_ids:
         # Verify class exists and load its program
@@ -154,6 +237,12 @@ async def manual_enroll_student(
                 # Delete existing enrollments in same program (replace)
                 for old_enrollment in old_enrollments:
                     replaced_class_ids.append(str(old_enrollment.class_id))
+                    old_class_result = await db.execute(
+                        select(Class.academic_year_id).where(Class.id == old_enrollment.class_id)
+                    )
+                    old_year = old_class_result.scalar_one_or_none()
+                    if old_year:
+                        affected_academic_year_ids.add(old_year)
                     await db.delete(old_enrollment)
                 # Create new enrollment
                 enrollment = Enrollment(
@@ -162,6 +251,8 @@ async def manual_enroll_student(
                 )
                 db.add(enrollment)
                 enrolled_class_ids.append(str(class_id))
+                if class_obj.academic_year_id:
+                    affected_academic_year_ids.add(class_obj.academic_year_id)
         else:
             # Multi-enrollment program (e.g., TNTT) - keep existing behavior
             existing_result = await db.execute(
@@ -182,6 +273,15 @@ async def manual_enroll_student(
             )
             db.add(enrollment)
             enrolled_class_ids.append(str(class_id))
+            if class_obj.academic_year_id:
+                affected_academic_year_ids.add(class_obj.academic_year_id)
+
+    if student.family_id:
+        await _recalculate_family_payments_for_years(
+            db=db,
+            family_id=student.family_id,
+            academic_year_ids=affected_academic_year_ids,
+        )
 
     await db.commit()
 

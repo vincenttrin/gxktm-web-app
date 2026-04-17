@@ -10,6 +10,12 @@ export function ConfirmationStep() {
   const { formState, academicYear } = state;
   const { family, children, classSelections } = formState;
 
+  const hasSelectedGiaoLy = (selection: typeof classSelections[number] | undefined) =>
+    selection?.giao_ly_level !== null && selection?.giao_ly_level !== undefined;
+
+  const hasSelectedVietNgu = (selection: typeof classSelections[number] | undefined) =>
+    selection?.viet_ngu_level !== null && selection?.viet_ngu_level !== undefined;
+
   // Get enrollment summary
   const enrollmentSummary = children.map(child => {
     const selection = classSelections.find(s => s.student_id === child.id);
@@ -38,9 +44,18 @@ export function ConfirmationStep() {
   const isExternalDiocese = dioceseId.toLowerCase().includes('nx');
   const tuitionFee = (() => {
     if (enrolledCount === 0) return 0;
-    if (isExternalDiocese) return enrolledCount * 225;
+
+    const tnttSurcharge = children.reduce((total, child) => {
+      const selection = classSelections.find(s => s.student_id === child.id);
+      if (!selection?.register_for_tntt) return total;
+      const hasBoth = hasSelectedGiaoLy(selection) && hasSelectedVietNgu(selection);
+      return total + (hasBoth ? 30 : 50);
+    }, 0);
+
+    if (isExternalDiocese) return (enrolledCount * 225) + tnttSurcharge;
     const schedule: Record<number, number> = { 1: 125, 2: 250, 3: 315 };
-    return schedule[enrolledCount] ?? 375;
+    const baseTuition = schedule[enrolledCount] ?? 375;
+    return baseTuition + tnttSurcharge;
   })();
 
   return (

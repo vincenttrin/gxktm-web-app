@@ -207,12 +207,37 @@ export default function PaymentList() {
 
   const handlePaymentClick = (family: EnrolledFamilyPayment) => {
     setSelectedFamily(family);
-    const calcTuition = (count: number, dioceseId?: string | null) => {
-      if (dioceseId && dioceseId.toLowerCase().includes('nx')) return count * 225;
-      const schedule: Record<number, number> = { 1: 125, 2: 250, 3: 315 };
-      return count > 0 ? (schedule[count] ?? 375) : 0;
+    const isGiaoLyProgram = (programName: string | null) => {
+      const normalized = (programName || '').toLowerCase();
+      return normalized.includes('giao ly') || normalized.includes('giáo lý');
     };
-    setPaymentAmountDue(family.amount_due?.toString() || calcTuition(family.enrolled_count, family.diocese_id).toString());
+
+    const isVietNguProgram = (programName: string | null) => {
+      const normalized = (programName || '').toLowerCase();
+      return normalized.includes('viet ngu') || normalized.includes('việt ngữ');
+    };
+
+    const isTnttProgram = (programName: string | null) => {
+      return (programName || '').toLowerCase().includes('tntt');
+    };
+
+    const calcTuition = (count: number, dioceseId?: string | null, students: StudentWithEnrollmentStatus[] = []) => {
+      const tnttSurcharge = students.reduce((total, student) => {
+        const hasTntt = student.enrolled_classes.some((c) => isTnttProgram(c.program_name));
+        if (!hasTntt) return total;
+        const hasGiaoLy = student.enrolled_classes.some((c) => isGiaoLyProgram(c.program_name));
+        const hasVietNgu = student.enrolled_classes.some((c) => isVietNguProgram(c.program_name));
+        return total + (hasGiaoLy && hasVietNgu ? 30 : 50);
+      }, 0);
+
+      if (dioceseId && dioceseId.toLowerCase().includes('nx')) return (count * 225) + tnttSurcharge;
+      const schedule: Record<number, number> = { 1: 125, 2: 250, 3: 315 };
+      return (count > 0 ? (schedule[count] ?? 375) : 0) + tnttSurcharge;
+    };
+    setPaymentAmountDue(
+      family.amount_due?.toString() ||
+      calcTuition(family.enrolled_count, family.diocese_id, family.students).toString()
+    );
     setPaymentAmountPaid(family.amount_paid?.toString() || '');
     setPaymentMethod('cash');
     setIsPaymentModalOpen(true);
