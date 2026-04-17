@@ -48,6 +48,7 @@ const vi: TranslationKeys = {
       classes: 'Lớp Học',
       payments: 'Thanh Toán',
       schoolYears: 'Năm Học',
+      adminEnrollment: 'Ghi Danh Quản Trị',
       adminUsers: 'Quản Trị Viên',
     },
   },

@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { Users, GraduationCap, DollarSign, Calendar, Shield } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Users, GraduationCap, DollarSign, Calendar, Shield, ClipboardCheck } from 'lucide-react';
 import { useTranslation } from '@/lib/i18n';
 import DashboardHeader, { DisplayYear } from './components/DashboardHeader';
 import FamilyList from './components/FamilyList';
@@ -9,15 +9,41 @@ import ClassList from './components/ClassList';
 import PaymentList from './components/PaymentList';
 import SchoolYearManagement from './components/SchoolYearManagement';
 import AdminManagement from './components/AdminManagement';
+import AdminEnrollmentTab from './components/AdminEnrollmentTab';
 import Toast from './components/Toast';
+import { Family } from '@/types/family';
+import { getAllFamilies } from '@/lib/api';
 
-type TabType = 'families' | 'classes' | 'payments' | 'school-years' | 'admin-users';
+type TabType = 'families' | 'classes' | 'payments' | 'school-years' | 'admin-users' | 'admin-enrollment';
 
 export default function DashboardPage() {
   const { t } = useTranslation();
   const [selectedYear, setSelectedYear] = useState<DisplayYear | null>(null);
   const [activeTab, setActiveTab] = useState<TabType>('families');
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [cachedFamilies, setCachedFamilies] = useState<Family[]>([]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadFamiliesCache = async () => {
+      if (cachedFamilies.length > 0) return;
+      try {
+        const families = await getAllFamilies();
+        if (isMounted) {
+          setCachedFamilies(families);
+        }
+      } catch (error) {
+        console.error('Failed to preload dashboard family cache:', error);
+      }
+    };
+
+    loadFamiliesCache();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [cachedFamilies.length]);
 
   const showToast = (message: string, type: 'success' | 'error') => {
     setToast({ message, type });
@@ -28,6 +54,7 @@ export default function DashboardPage() {
     { id: 'classes' as TabType, label: t('dashboard.tabs.classes'), icon: GraduationCap },
     { id: 'payments' as TabType, label: t('dashboard.tabs.payments'), icon: DollarSign },
     { id: 'school-years' as TabType, label: t('dashboard.tabs.schoolYears'), icon: Calendar },
+    { id: 'admin-enrollment' as TabType, label: t('dashboard.tabs.adminEnrollment'), icon: ClipboardCheck },
     { id: 'admin-users' as TabType, label: t('dashboard.tabs.adminUsers'), icon: Shield },
   ];
 
@@ -65,7 +92,13 @@ export default function DashboardPage() {
       </div>
 
       <main>
-        {activeTab === 'families' && <FamilyList selectedYear={selectedYear} />}
+        {activeTab === 'families' && (
+          <FamilyList
+            selectedYear={selectedYear}
+            cachedFamilies={cachedFamilies}
+            onFamiliesChange={setCachedFamilies}
+          />
+        )}
         {activeTab === 'classes' && <ClassList selectedYear={selectedYear} />}
         {activeTab === 'payments' && (
           <div className="p-6">
@@ -73,6 +106,7 @@ export default function DashboardPage() {
           </div>
         )}
         {activeTab === 'school-years' && <SchoolYearManagement />}
+        {activeTab === 'admin-enrollment' && <AdminEnrollmentTab cachedFamilies={cachedFamilies} />}
         {activeTab === 'admin-users' && (
           <div className="p-6">
             <AdminManagement onShowToast={showToast} />

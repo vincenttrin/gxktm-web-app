@@ -46,6 +46,7 @@ const en = {
       classes: 'Classes',
       payments: 'Payments',
       schoolYears: 'School Years',
+      adminEnrollment: 'Admin Enrollment',
       adminUsers: 'Admin Users',
     },
   },

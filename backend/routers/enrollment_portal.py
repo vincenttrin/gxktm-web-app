@@ -307,7 +307,11 @@ async def get_suggested_enrollments(
             selectinload(Family.students)
             .selectinload(Student.enrollments)
             .selectinload(Enrollment.assigned_class)
-            .selectinload(Class.program)
+            .selectinload(Class.program),
+            selectinload(Family.students)
+            .selectinload(Student.enrollments)
+            .selectinload(Enrollment.assigned_class)
+            .selectinload(Class.academic_year)
         )
         .where(Family.id == family_id)
     )
@@ -324,22 +328,59 @@ async def get_suggested_enrollments(
     for student in family.students:
         logger.warning(f"[suggested-enrollments] student={student.first_name} {student.last_name} (id={student.id}), total enrollments={len(student.enrollments)}")
 
-        # Get last year's enrollments (enrollments NOT in current year)
-        last_year_enrollments = [
+        # Get prior enrollments (enrollments NOT in current year)
+        prior_enrollments = [
             e for e in student.enrollments
             if e.assigned_class and e.assigned_class.academic_year_id != current_year.id
         ]
 
-        logger.warning(f"[suggested-enrollments]   last_year_enrollments count={len(last_year_enrollments)}")
+        logger.warning(f"[suggested-enrollments]   prior_enrollments count={len(prior_enrollments)}")
         for e in student.enrollments:
             cls = e.assigned_class
             logger.warning(f"[suggested-enrollments]   enrollment: class={cls.name if cls else 'None'}, academic_year_id={cls.academic_year_id if cls else 'None'}, matches_current={cls.academic_year_id == current_year.id if cls else 'N/A'}")
 
-        is_currently_enrolled = len(last_year_enrollments) > 0
+        is_currently_enrolled = len(prior_enrollments) > 0
         completed_programs = []
         suggested_classes = []
+        latest_enrollment_by_program: dict[int, Enrollment] = {}
 
-        for enrollment in last_year_enrollments:
+        # Keep only the latest prior enrollment per program.
+        # This ensures progression is based on the student's most recent class in that program.
+        for enrollment in prior_enrollments:
+            old_class = enrollment.assigned_class
+            if not old_class:
+                continue
+            if old_class.program_id is None:
+                continue
+
+            previous = latest_enrollment_by_program.get(old_class.program_id)
+            if not previous or not previous.assigned_class:
+                latest_enrollment_by_program[old_class.program_id] = enrollment
+                continue
+
+            previous_class = previous.assigned_class
+            previous_year_sort = (
+                previous_class.academic_year.start_year
+                if previous_class.academic_year and previous_class.academic_year.start_year is not None
+                else previous_class.academic_year_id
+                if previous_class.academic_year_id is not None
+                else -1
+            )
+            current_year_sort = (
+                old_class.academic_year.start_year
+                if old_class.academic_year and old_class.academic_year.start_year is not None
+                else old_class.academic_year_id
+                if old_class.academic_year_id is not None
+                else -1
+            )
+            previous_level = parse_class_level(previous_class.name) or -1
+            current_level = parse_class_level(old_class.name) or -1
+
+            # Prefer newer academic year; if same year, prefer higher level.
+            if (current_year_sort, current_level) > (previous_year_sort, previous_level):
+                latest_enrollment_by_program[old_class.program_id] = enrollment
+
+        for enrollment in latest_enrollment_by_program.values():
             old_class = enrollment.assigned_class
             if not old_class:
                 continue
