@@ -321,6 +321,8 @@ export interface FamilyPaymentStatus {
 export interface FamilyWithPayment extends Family {
   payment_status: FamilyPaymentStatus | null;
   enrolled_class_count: number;
+  enrolled_student_count?: number;
+  tntt_only_count?: number;
 }
 
 export interface PaginatedFamilyWithPaymentResponse {
@@ -404,6 +406,7 @@ export interface StudentWithEnrollmentStatus {
   first_name: string;
   last_name: string;
   is_enrolled: boolean;
+  is_tntt_only?: boolean;
   enrolled_classes: EnrolledClassInfo[];
 }
 
@@ -420,6 +423,7 @@ export interface EnrolledFamilyPayment {
   guardians: EnrolledFamilyGuardian[];
   students: StudentWithEnrollmentStatus[];
   enrolled_count: number;
+  tntt_only_count?: number;
   payment_id: string | null;
   payment_status: PaymentStatus;
   amount_due: number | null;

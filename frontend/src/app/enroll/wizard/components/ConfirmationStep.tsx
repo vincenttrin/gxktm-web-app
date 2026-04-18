@@ -34,10 +34,24 @@ export function ConfirmationStep() {
     const selection = classSelections.find(s => s.student_id === child.id);
     return selection && (selection.giao_ly_level !== null || selection.viet_ngu_level !== null || selection.register_for_tntt);
   }).length;
+  const tnttOnlyCount = children.filter(child => {
+    const selection = classSelections.find(s => s.student_id === child.id);
+    return !!selection &&
+      selection.register_for_tntt &&
+      selection.giao_ly_level === null &&
+      selection.viet_ngu_level === null;
+  }).length;
   const tuitionFee = (() => {
     if (enrolledCount === 0) return 0;
+    const nonTnttOnlyCount = Math.max(0, enrolledCount - tnttOnlyCount);
+    const tnttOnlyTotal = tnttOnlyCount * 50;
+    if (nonTnttOnlyCount <= 0) return tnttOnlyTotal;
+    const normalizedDioceseId = (family.diocese_id || '').trim().toLowerCase();
+    if (normalizedDioceseId.includes('nx')) {
+      return tnttOnlyTotal + (nonTnttOnlyCount * 225);
+    }
     const schedule: Record<number, number> = { 1: 125, 2: 250, 3: 315 };
-    return schedule[enrolledCount] ?? 375;
+    return tnttOnlyTotal + (schedule[nonTnttOnlyCount] ?? 375);
   })();
 
   return (

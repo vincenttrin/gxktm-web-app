@@ -23,14 +23,28 @@ export default function PaymentModal({
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [paymentHistory, setPaymentHistory] = useState<Payment[]>([]);
+
+  const calculateTuition = useCallback((count: number, dioceseId: string | null, tnttOnlyCount = 0) => {
+    if (count <= 0) return 0;
+    const normalizedTnttOnlyCount = Math.max(0, tnttOnlyCount);
+    const nonTnttOnlyCount = Math.max(0, count - normalizedTnttOnlyCount);
+    const tnttOnlyTotal = normalizedTnttOnlyCount * 50;
+    if (nonTnttOnlyCount <= 0) return tnttOnlyTotal;
+    const normalizedDioceseId = (dioceseId || '').trim().toLowerCase();
+    if (normalizedDioceseId.includes('nx')) {
+      return tnttOnlyTotal + (nonTnttOnlyCount * 225);
+    }
+    const schedule: Record<number, number> = { 1: 125, 2: 250, 3: 315 };
+    return tnttOnlyTotal + (schedule[nonTnttOnlyCount] ?? 375);
+  }, []);
   
   // Form state
   const [amountDue, setAmountDue] = useState<string>(
     family.payment_status?.amount_due?.toString() ||
     (family.enrolled_class_count ? (() => {
-      const count = family.enrolled_class_count!;
-      const schedule: Record<number, number> = { 1: 125, 2: 250, 3: 315 };
-      return (count > 0 ? (schedule[count] ?? 375) : 0).toString();
+      const count = family.enrolled_student_count ?? family.enrolled_class_count!;
+      const tnttOnlyCount = family.tntt_only_count ?? 0;
+      return calculateTuition(count, family.diocese_id, tnttOnlyCount).toString();
     })() : '')
   );
   const [amountPaid, setAmountPaid] = useState<string>(

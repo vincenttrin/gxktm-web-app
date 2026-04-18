@@ -66,19 +66,32 @@ async def _recalculate_family_payments_for_years(
 
     for year_id in academic_year_ids:
         enrolled_count = 0
+        tntt_only_count = 0
 
         for student in family.students:
-            is_enrolled = False
+            student_program_names: set[str] = set()
             for enrollment in student.enrollments:
                 class_obj = enrollment.assigned_class
                 if not class_obj or class_obj.academic_year_id != year_id:
                     continue
-                is_enrolled = True
-                break
+                program_name = (
+                    (class_obj.program.name if class_obj.program else "")
+                    .strip()
+                    .lower()
+                )
+                if program_name:
+                    student_program_names.add(program_name)
+            is_enrolled = len(student_program_names) > 0
             if is_enrolled:
                 enrolled_count += 1
+            if is_enrolled and all("tntt" in program_name for program_name in student_program_names):
+                tntt_only_count += 1
 
-        calculated_amount_due = calculate_base_tuition(enrolled_count)
+        calculated_amount_due = calculate_base_tuition(
+            enrolled_count,
+            family.diocese_id,
+            tntt_only_count=tntt_only_count,
+        )
         school_year_name = year_to_name.get(year_id)
         if not school_year_name:
             continue

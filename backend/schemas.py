@@ -442,6 +442,8 @@ class FamilyPaymentStatus(BaseModel):
 class FamilyWithPaymentResponse(FamilyResponse):
     payment_status: Optional[FamilyPaymentStatus] = None
     enrolled_class_count: int = 0
+    enrolled_student_count: int = 0
+    tntt_only_count: int = 0
 
 
 class PaginatedFamilyWithPaymentResponse(BaseModel):
@@ -516,6 +518,7 @@ class StudentWithEnrollmentStatus(BaseModel):
     first_name: str
     last_name: str
     is_enrolled: bool = False  # Whether enrolled in current year
+    is_tntt_only: bool = False
     enrolled_classes: List[EnrolledClassInfo] = []  # Classes enrolled in
     
     class Config:
@@ -540,6 +543,7 @@ class EnrolledFamilyPayment(BaseModel):
     guardians: List[GuardianSimple] = []
     students: List[StudentWithEnrollmentStatus] = []  # Updated to include enrollment status
     enrolled_count: int = 0  # Number of students enrolled
+    tntt_only_count: int = 0
     payment_id: Optional[UUID] = None  # Existing payment record ID, if any
     payment_status: str = "unpaid"  # unpaid, partial, paid
     amount_due: Optional[float] = None

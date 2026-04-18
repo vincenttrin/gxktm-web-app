@@ -89,4 +89,4 @@ docker compose exec frontend npx eslint .     # ESLint (run inside container)
 
 ## Business Rules
 
-- **Payment calculation:** Tuition uses a flat family tier based on number of enrolled students (regardless of program mix): 1 student = $125, 2 = $250, 3 = $315, 4+ = $375. `amount_due` auto-calculates in `get_enrolled_families` but preserves manually-set values if a payment record already exists. Tuition is also displayed on the enrollment confirmation page.
+- **Payment calculation:** Tuition has three rules: (1) Students enrolled **only** in TNTT are charged **$50 per student**. (2) Remaining students follow family pricing tiers: 1 student = $125, 2 = $250, 3 = $315, 4+ = $375. (3) For external diocese families (`diocese_id` contains `nx`), remaining non-TNTT-only students are charged **$225 per student** instead of tier pricing. `amount_due` auto-calculates in `get_enrolled_families` but preserves manually-set values if a payment record already exists. Tuition is also displayed on the enrollment confirmation page.

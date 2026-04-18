@@ -8,7 +8,7 @@ import math
 
 from database import get_db
 from auth import require_admin, UserInfo
-from models import Family, Guardian, EmergencyContact, Student, AcademicYear, Payment, Enrollment
+from models import Family, Guardian, EmergencyContact, Student, AcademicYear, Payment, Enrollment, Class
 from schemas import (
     FamilyCreate,
     FamilyUpdate,
@@ -30,6 +30,7 @@ from schemas import (
     PaymentStatusEnum,
     PaymentResponse,
 )
+from utils.pricing import calculate_base_tuition
 
 router = APIRouter(prefix="/api/families", tags=["families"])
 
@@ -146,7 +147,10 @@ async def get_families_with_payments(
     # Base query with eager loading
     query = select(Family).options(
         selectinload(Family.guardians),
-        selectinload(Family.students).selectinload(Student.enrollments),
+        selectinload(Family.students)
+        .selectinload(Student.enrollments)
+        .selectinload(Enrollment.assigned_class)
+        .selectinload(Class.program),
         selectinload(Family.emergency_contacts),
         selectinload(Family.payments),
     )
@@ -209,19 +213,38 @@ async def get_families_with_payments(
                     )
                     break
         
+        # Count enrolled classes and enrolled students
+        enrolled_class_count = 0
+        enrolled_student_count = 0
+        tntt_only_count = 0
+        for student in family.students:
+            student_enrollment_count = len(student.enrollments)
+            enrolled_class_count += student_enrollment_count
+            if student_enrollment_count > 0:
+                enrolled_student_count += 1
+            if len(student.enrollments) > 0:
+                student_program_names: set[str] = set()
+                for enrollment in student.enrollments:
+                    class_obj = enrollment.assigned_class
+                    if not class_obj or not class_obj.program:
+                        continue
+                    student_program_names.add(class_obj.program.name.strip().lower())
+                if student_program_names and all("tntt" in program_name for program_name in student_program_names):
+                    tntt_only_count += 1
+
         # If no payment record exists, consider as unpaid
         if not payment_info and school_year:
+            calculated_amount_due = calculate_base_tuition(
+                enrolled_student_count,
+                family.diocese_id,
+                tntt_only_count=tntt_only_count,
+            )
             payment_info = FamilyPaymentStatus(
                 payment_status=PaymentStatusEnum.UNPAID,
-                amount_due=None,
+                amount_due=calculated_amount_due,
                 amount_paid=0,
                 school_year=school_year,
             )
-        
-        # Count enrolled classes
-        enrolled_count = 0
-        for student in family.students:
-            enrolled_count += len(student.enrollments)
         
         # Apply payment status filter
         if payment_status and payment_info:
@@ -240,7 +263,9 @@ async def get_families_with_payments(
             "students": family.students,
             "emergency_contacts": family.emergency_contacts,
             "payment_status": payment_info,
-            "enrolled_class_count": enrolled_count,
+            "enrolled_class_count": enrolled_class_count,
+            "enrolled_student_count": enrolled_student_count,
+            "tntt_only_count": tntt_only_count,
         })
     
     total_pages = math.ceil(total / page_size) if total > 0 else 1
