@@ -823,15 +823,17 @@ async def submit_enrollment(
             if selection and selection.register_for_tntt:
                 courses.append(tntt_class_name or "TNTT")
 
-            student_summaries.append(
-                {
-                    "id": student.id,
-                    "first_name": student.first_name,
-                    "last_name": student.last_name,
-                    "vietnamese_name": student.vietnamese_name,
-                    "courses": courses,
-                }
-            )
+            # Only include students with course selections in the email summary
+            if courses:
+                student_summaries.append(
+                    {
+                        "id": student.id,
+                        "first_name": student.first_name,
+                        "last_name": student.last_name,
+                        "vietnamese_name": student.vietnamese_name,
+                        "courses": courses,
+                    }
+                )
         class_selection_summaries = [
             {
                 "student_id": selection.student_id,

@@ -207,36 +207,13 @@ export default function PaymentList() {
 
   const handlePaymentClick = (family: EnrolledFamilyPayment) => {
     setSelectedFamily(family);
-    const isGiaoLyProgram = (programName: string | null) => {
-      const normalized = (programName || '').toLowerCase();
-      return normalized.includes('giao ly') || normalized.includes('giáo lý');
-    };
-
-    const isVietNguProgram = (programName: string | null) => {
-      const normalized = (programName || '').toLowerCase();
-      return normalized.includes('viet ngu') || normalized.includes('việt ngữ');
-    };
-
-    const isTnttProgram = (programName: string | null) => {
-      return (programName || '').toLowerCase().includes('tntt');
-    };
-
-    const calcTuition = (count: number, dioceseId?: string | null, students: StudentWithEnrollmentStatus[] = []) => {
-      const tnttSurcharge = students.reduce((total, student) => {
-        const hasTntt = student.enrolled_classes.some((c) => isTnttProgram(c.program_name));
-        if (!hasTntt) return total;
-        const hasGiaoLy = student.enrolled_classes.some((c) => isGiaoLyProgram(c.program_name));
-        const hasVietNgu = student.enrolled_classes.some((c) => isVietNguProgram(c.program_name));
-        return total + (hasGiaoLy && hasVietNgu ? 30 : 50);
-      }, 0);
-
-      if (dioceseId && dioceseId.toLowerCase().includes('nx')) return (count * 225) + tnttSurcharge;
+    const calcTuition = (count: number) => {
       const schedule: Record<number, number> = { 1: 125, 2: 250, 3: 315 };
-      return (count > 0 ? (schedule[count] ?? 375) : 0) + tnttSurcharge;
+      return count > 0 ? (schedule[count] ?? 375) : 0;
     };
     setPaymentAmountDue(
       family.amount_due?.toString() ||
-      calcTuition(family.enrolled_count, family.diocese_id, family.students).toString()
+      calcTuition(family.enrolled_count).toString()
     );
     setPaymentAmountPaid(family.amount_paid?.toString() || '');
     setPaymentMethod('cash');
@@ -480,11 +457,6 @@ export default function PaymentList() {
                           <h3 className="font-semibold text-gray-900">
                             {family.family_name || 'Unknown Family'}
                           </h3>
-                          {family.diocese_id && family.diocese_id.toLowerCase().includes('x') && (
-                            <span className="px-2 py-0.5 text-xs font-medium bg-purple-100 text-purple-700 rounded-full">
-                              External Diocese
-                            </span>
-                          )}
                         </div>
                         <p className="text-sm text-gray-500">
                           {family.guardians.map((g) => g.name).join(', ') || 'No guardians'}

@@ -89,5 +89,4 @@ docker compose exec frontend npx eslint .     # ESLint (run inside container)
 
 ## Business Rules
 
-- **Payment calculation:** Tuition uses a tiered schedule: 1 student = $125, 2 = $250, 3 = $315, 4+ = $375. Families with 'nx' in `diocese_id` (external diocese) pay a flat $225 per student. TNTT adds a per-student surcharge: +$50 when the student is in TNTT, or +$30 when the same student is in TNTT and also enrolled in both Giao Ly and Viet Ngu. `amount_due` auto-calculates in `get_enrolled_families` but preserves manually-set values if a payment record already exists. Tuition is also displayed on the enrollment confirmation page.
-- **Diocese differentiation:** Families with 'nx' in `diocese_id` are external diocese and pay different rates. They are visually marked with a purple "External Diocese" badge in the payment list and enrollment confirmation.
+- **Payment calculation:** Tuition uses a flat family tier based on number of enrolled students (regardless of program mix): 1 student = $125, 2 = $250, 3 = $315, 4+ = $375. `amount_due` auto-calculates in `get_enrolled_families` but preserves manually-set values if a payment record already exists. Tuition is also displayed on the enrollment confirmation page.

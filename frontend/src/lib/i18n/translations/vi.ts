@@ -256,7 +256,6 @@ const vi: TranslationKeys = {
       family: 'Gia đình',
       tuitionSummary: 'Phí Ghi Danh',
       studentsEnrolled: '{count} học sinh ghi danh',
-      externalDiocese: 'Giáo Phận Ngoài',
       important: 'QUAN TRỌNG',
       notFinalizedUntilPayment: 'Ghi danh chưa hoàn tất cho đến khi nhận được thanh toán.',
       acceptedPaymentMethods: 'Chúng tôi chấp nhận tiền mặt, chi phiếu (check), và Zelle.',

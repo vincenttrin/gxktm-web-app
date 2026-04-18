@@ -47,35 +47,14 @@ function buildEmailHtml(payload: EnrollmentConfirmationPayload): string {
   const familyName = payload.family_name || 'Your Family';
   const yearName = payload.academic_year_name || 'the current academic year';
   const students = payload.students || [];
-  const selectionsByStudentId = new Map(
-    (payload.class_selections || [])
-      .filter((selection) => !!selection.student_id)
-      .map((selection) => [selection.student_id as string, selection]),
-  );
-
   const studentsWithCourses = students
     .map((student) => {
-      const selection = student.id
-        ? selectionsByStudentId.get(student.id)
-        : undefined;
-      const providedCourses = (student.courses || []).filter(
-        (course): course is string => !!course,
+      const courses = Array.from(
+        new Set((student.courses || []).filter((course): course is string => !!course)),
       );
-
-      const fallbackCourses = [
-        selection?.giao_ly_level && !selection.giao_ly_completed
-          ? selection.giao_ly_class_name || `Giáo Lý ${selection.giao_ly_level}`
-          : null,
-        selection?.viet_ngu_level && !selection.viet_ngu_completed
-          ? selection.viet_ngu_class_name || `Việt Ngữ ${selection.viet_ngu_level}`
-          : null,
-      ].filter((course): course is string => !!course);
-
-      const courses = providedCourses.length > 0 ? providedCourses : fallbackCourses;
-
       return {
         student,
-        courses: Array.from(new Set(courses)),
+        courses,
       };
     })
     .filter(({ courses }) => courses.length > 0);
@@ -92,20 +71,31 @@ function buildEmailHtml(payload: EnrollmentConfirmationPayload): string {
               ? ` (${student.vietnamese_name})`
               : '';
             const courseLines = courses
-              .map((course) => `<li>${course}</li>`)
+              .map(
+                (course) =>
+                  `<li style="margin: 0 0 4px; padding: 0;">${course}</li>`,
+              )
               .join('');
-            return `<li><strong>${fullName || 'Student'}${vnName}</strong><ul>${courseLines}</ul></li>`;
+            return `
+              <li style="margin: 0 0 12px; padding: 12px; border: 1px solid #e5e7eb; border-radius: 8px;">
+                <p style="margin: 0 0 8px;">
+                  <strong>${fullName || 'Student'}${vnName}</strong>
+                </p>
+                <p style="margin: 0 0 6px; color: #374151; font-size: 13px;">Enrolled courses:</p>
+                <ul style="margin: 0; padding-left: 20px;">${courseLines}</ul>
+              </li>
+            `;
           })
           .join('')
-      : '<li>No class enrollments were submitted.</li>';
+      : '<li style="margin: 0;">No class enrollments were submitted.</li>';
 
   return `
     <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #1f2937;">
       <h2 style="margin: 0 0 12px; color: #065f46;">Enrollment Confirmation</h2>
       <p>Thank you for submitting your enrollment for <strong>${familyName}</strong>.</p>
       <p>We have received your registration for <strong>${yearName}</strong>.</p>
-      <p>Registered courses by student:</p>
-      <ul>${studentLines}</ul>
+      <p style="margin: 0 0 8px;">Registered courses by student:</p>
+      <ul style="margin: 0; padding-left: 0; list-style: none;">${studentLines}</ul>
       <p>
         If you need to make updates, please contact the parish office.
       </p>

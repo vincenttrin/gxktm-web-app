@@ -39,7 +39,7 @@ from schemas import (
     StudentWithEnrollmentStatus,
     EnrolledClassInfo,
 )
-from utils.pricing import calculate_base_tuition, calculate_tntt_surcharge
+from utils.pricing import calculate_base_tuition
 
 router = APIRouter(prefix="/api/payments", tags=["payments"])
 
@@ -265,8 +265,8 @@ async def get_enrolled_families(
         )
         
         # Calculate amount_due: use existing payment amount_due, or calculate from enrollment.
-        # TNTT surcharge is +$50/student, or +$30/student when also enrolled in both Giao Ly and Viet Ngu.
-        calculated_amount_due = calculate_base_tuition(enrolled_count, family.diocese_id) + calculate_tntt_surcharge(students_with_status)
+        # Flat tuition by number of enrolled students: 1=$125, 2=$250, 3=$315, 4+=$375.
+        calculated_amount_due = calculate_base_tuition(enrolled_count)
         amount_due = float(payment.amount_due) if payment and payment.amount_due else calculated_amount_due
 
         enrolled_family_items.append(EnrolledFamilyPayment(

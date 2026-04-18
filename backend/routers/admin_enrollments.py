@@ -27,11 +27,9 @@ from schemas import (
     BulkEnrollmentResponse,
     StudentEnrollmentInfo,
     ClassResponse,
-    StudentWithEnrollmentStatus,
-    EnrolledClassInfo,
 )
 from auth import require_admin, UserInfo
-from utils.pricing import calculate_base_tuition, calculate_tntt_surcharge
+from utils.pricing import calculate_base_tuition
 
 router = APIRouter(prefix="/api/enrollments", tags=["enrollments"])
 
@@ -67,38 +65,20 @@ async def _recalculate_family_payments_for_years(
         year_to_name[year_id] = year_name
 
     for year_id in academic_year_ids:
-        students_with_status: list[StudentWithEnrollmentStatus] = []
         enrolled_count = 0
 
         for student in family.students:
-            enrolled_classes_for_year: list[EnrolledClassInfo] = []
+            is_enrolled = False
             for enrollment in student.enrollments:
                 class_obj = enrollment.assigned_class
                 if not class_obj or class_obj.academic_year_id != year_id:
                     continue
-                enrolled_classes_for_year.append(
-                    EnrolledClassInfo(
-                        id=class_obj.id,
-                        name=class_obj.name,
-                        program_name=class_obj.program.name if class_obj.program else None,
-                    )
-                )
-
-            is_enrolled = len(enrolled_classes_for_year) > 0
+                is_enrolled = True
+                break
             if is_enrolled:
                 enrolled_count += 1
 
-            students_with_status.append(
-                StudentWithEnrollmentStatus(
-                    id=student.id,
-                    first_name=student.first_name,
-                    last_name=student.last_name,
-                    is_enrolled=is_enrolled,
-                    enrolled_classes=enrolled_classes_for_year,
-                )
-            )
-
-        calculated_amount_due = calculate_base_tuition(enrolled_count, family.diocese_id) + calculate_tntt_surcharge(students_with_status)
+        calculated_amount_due = calculate_base_tuition(enrolled_count)
         school_year_name = year_to_name.get(year_id)
         if not school_year_name:
             continue

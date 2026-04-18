@@ -10,12 +10,6 @@ export function ConfirmationStep() {
   const { formState, academicYear } = state;
   const { family, children, classSelections } = formState;
 
-  const hasSelectedGiaoLy = (selection: typeof classSelections[number] | undefined) =>
-    selection?.giao_ly_level !== null && selection?.giao_ly_level !== undefined;
-
-  const hasSelectedVietNgu = (selection: typeof classSelections[number] | undefined) =>
-    selection?.viet_ngu_level !== null && selection?.viet_ngu_level !== undefined;
-
   // Get enrollment summary
   const enrollmentSummary = children.map(child => {
     const selection = classSelections.find(s => s.student_id === child.id);
@@ -40,22 +34,10 @@ export function ConfirmationStep() {
     const selection = classSelections.find(s => s.student_id === child.id);
     return selection && (selection.giao_ly_level !== null || selection.viet_ngu_level !== null || selection.register_for_tntt);
   }).length;
-  const dioceseId = family.diocese_id || '';
-  const isExternalDiocese = dioceseId.toLowerCase().includes('nx');
   const tuitionFee = (() => {
     if (enrolledCount === 0) return 0;
-
-    const tnttSurcharge = children.reduce((total, child) => {
-      const selection = classSelections.find(s => s.student_id === child.id);
-      if (!selection?.register_for_tntt) return total;
-      const hasBoth = hasSelectedGiaoLy(selection) && hasSelectedVietNgu(selection);
-      return total + (hasBoth ? 30 : 50);
-    }, 0);
-
-    if (isExternalDiocese) return (enrolledCount * 225) + tnttSurcharge;
     const schedule: Record<number, number> = { 1: 125, 2: 250, 3: 315 };
-    const baseTuition = schedule[enrolledCount] ?? 375;
-    return baseTuition + tnttSurcharge;
+    return schedule[enrolledCount] ?? 375;
   })();
 
   return (
@@ -145,11 +127,6 @@ export function ConfirmationStep() {
               <div>
                 <p className="text-sm text-emerald-800">
                   {t('wizard.confirmation.studentsEnrolled', { count: enrolledCount })}
-                  {isExternalDiocese && (
-                    <span className="ml-2 inline-flex items-center rounded-full bg-purple-100 px-2.5 py-0.5 text-xs font-medium text-purple-800">
-                      {t('wizard.confirmation.externalDiocese')}
-                    </span>
-                  )}
                 </p>
               </div>
               <p className="text-2xl font-bold text-emerald-900">${tuitionFee.toFixed(2)}</p>

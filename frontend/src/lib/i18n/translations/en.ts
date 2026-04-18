@@ -254,7 +254,6 @@ const en = {
       family: 'Family',
       tuitionSummary: 'Registration Fee',
       studentsEnrolled: '{count} student(s) enrolled',
-      externalDiocese: 'External Diocese',
       important: 'IMPORTANT',
       notFinalizedUntilPayment: 'Your enrollment is not finalized until payment is received.',
       acceptedPaymentMethods: 'We accept cash, checks, and Zelle.',
