@@ -143,7 +143,7 @@ serve(async (req: Request) => {
   const fromEmail = Deno.env.get('ENROLLMENT_FROM_EMAIL') || 'noreply@gxktm.org';
   const replyToEmail = Deno.env.get('ENROLLMENT_REPLY_TO') || undefined;
 
-  const emailBody = {
+  const emailBody: Record<string, unknown> = {
     sender: {
       name: fromName,
       email: fromEmail,
@@ -151,8 +151,11 @@ serve(async (req: Request) => {
     to: toEmails.map((email) => ({ email })),
     subject: `Enrollment Confirmation - ${payload.academic_year_name || 'School Year'}`,
     htmlContent: buildEmailHtml(payload),
-    replyTo: replyToEmail ? { email: replyToEmail } : undefined,
   };
+
+  if (replyToEmail) {
+    emailBody.replyTo = { email: replyToEmail };
+  }
 
   const brevoResponse = await fetch('https://api.brevo.com/v3/smtp/email', {
     method: 'POST',
@@ -165,7 +168,10 @@ serve(async (req: Request) => {
 
   if (!brevoResponse.ok) {
     const brevoErrorText = await brevoResponse.text();
-    return jsonResponse(502, {
+    console.error('Failed to send email via Brevo:', brevoErrorText);
+    console.error('Email payload was:', JSON.stringify(emailBody, null, 2));
+    console.error('Response was:', await brevoResponse.text());
+    return jsonResponse(brevoResponse.status, {
       error: 'Failed to send email via Brevo',
       details: brevoErrorText,
     });

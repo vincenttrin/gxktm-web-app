@@ -5,8 +5,8 @@ primary_region = "ord"
   dockerfile = "Dockerfile"
 
 [build.args]
-  NEXT_PUBLIC_SUPABASE_URL = "https://zncgxjgxbvzwdukgatnn.supabase.co"
-  NEXT_PUBLIC_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpuY2d4amd4YnZ6d2R1a2dhdG5uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY5NTc5MDcsImV4cCI6MjA4MjUzMzkwN30.AEXvMW_GI4fZ3V_o6rFfo5HLGUDcWnOlCP-hamTbgpU"
+  NEXT_PUBLIC_SUPABASE_URL = "https://pwrytxembgahkazydrac.supabase.co"
+  NEXT_PUBLIC_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB3cnl0eGVtYmdhaGthenlkcmFjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczOTk1ODYsImV4cCI6MjA5Mjk3NTU4Nn0.5ZmbabHW1g8SyDMwK0_TYrhIVExm2HaqxD8S8GH63xs"
   NEXT_PUBLIC_CONTACT_EMAIL = "Theresanganbl@gmail.com"
   NEXT_PUBLIC_HOME_URL = "gxktm.org"
   NEXT_PUBLIC_API_URL = "https://gxktm-backend.fly.dev"

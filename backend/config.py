@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     # Enrollment confirmation email (Supabase Edge Function)
     supabase_enrollment_confirmation_function_url: str = os.getenv(
         "SUPABASE_ENROLLMENT_CONFIRMATION_FUNCTION_URL",
-        f"{os.getenv('NEXT_PUBLIC_SUPABASE_URL', '').rstrip('/')}/functions/v1/registration-confirmation-email"
+        f"{os.getenv('NEXT_PUBLIC_SUPABASE_URL', '').rstrip('/')}/functions/v1/enrollment-confirmation"
         if os.getenv("NEXT_PUBLIC_SUPABASE_URL")
         else "",
     )
