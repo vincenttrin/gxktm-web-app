@@ -233,6 +233,7 @@ async def get_enrolled_families(
         students_with_status = []
         enrolled_count = 0
         tntt_only_count = 0
+        viet_ngu_9_count = 0
         
         for student in family.students:
             # Find enrolled classes for this student in current year
@@ -260,6 +261,11 @@ async def get_enrolled_families(
             )
             if is_tntt_only:
                 tntt_only_count += 1
+            if any(
+                (enrolled_class.name or "").strip().lower() == "viet ngu 9"
+                for enrolled_class in student_enrolled_classes
+            ):
+                viet_ngu_9_count += 1
             
             students_with_status.append(StudentWithEnrollmentStatus(
                 id=student.id,
@@ -283,6 +289,7 @@ async def get_enrolled_families(
             enrolled_count,
             family.diocese_id,
             tntt_only_count=tntt_only_count,
+            viet_ngu_9_count=viet_ngu_9_count,
         )
         amount_due = float(payment.amount_due) if payment and payment.amount_due else calculated_amount_due
 

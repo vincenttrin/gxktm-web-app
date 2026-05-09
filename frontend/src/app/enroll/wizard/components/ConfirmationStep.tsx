@@ -41,6 +41,10 @@ export function ConfirmationStep() {
       selection.giao_ly_level === null &&
       selection.viet_ngu_level === null;
   }).length;
+  const vietNgu9Count = children.filter(child => {
+    const selection = classSelections.find(s => s.student_id === child.id);
+    return !!selection && selection.viet_ngu_level === 9;
+  }).length;
   const tuitionFee = (() => {
     if (enrolledCount === 0) return 0;
     const nonTnttOnlyCount = Math.max(0, enrolledCount - tnttOnlyCount);
@@ -48,10 +52,10 @@ export function ConfirmationStep() {
     if (nonTnttOnlyCount <= 0) return tnttOnlyTotal;
     const normalizedDioceseId = (family.diocese_id || '').trim().toLowerCase();
     if (normalizedDioceseId.includes('nx')) {
-      return tnttOnlyTotal + (nonTnttOnlyCount * 225);
+      return Math.max(0, tnttOnlyTotal + (nonTnttOnlyCount * 225) - (vietNgu9Count * 35));
     }
     const schedule: Record<number, number> = { 1: 125, 2: 250, 3: 315 };
-    return tnttOnlyTotal + (schedule[nonTnttOnlyCount] ?? 375);
+    return Math.max(0, tnttOnlyTotal + (schedule[nonTnttOnlyCount] ?? 375) - (vietNgu9Count * 35));
   })();
 
   return (

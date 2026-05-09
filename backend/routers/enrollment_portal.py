@@ -21,7 +21,18 @@ import re
 logger = logging.getLogger(__name__)
 
 from database import get_db
-from models import Family, Guardian, Student, Enrollment, Class, AcademicYear, Program, EmergencyContact
+from models import (
+    Family,
+    Guardian,
+    Student,
+    Enrollment,
+    Class,
+    AcademicYear,
+    Program,
+    EmergencyContact,
+    Payment,
+    PaymentStatus,
+)
 from schemas import (
     FamilyResponse,
     ClassResponse,
@@ -31,6 +42,7 @@ from schemas import (
 )
 from auth import get_current_user, UserInfo
 from utils.enrollment_notifications import send_enrollment_confirmation_email
+from utils.pricing import calculate_base_tuition
 
 router = APIRouter(prefix="/api/enrollment", tags=["enrollment"])
 
@@ -789,6 +801,55 @@ async def submit_enrollment(
                         "TNTT enrollment requested but TNTT class not found for academic year %s",
                         request.academic_year_id,
                     )
+
+        enrolled_count = sum(
+            1
+            for selection in request.class_selections
+            if selection.giao_ly_level or selection.viet_ngu_level or selection.register_for_tntt
+        )
+        if enrolled_count > 0:
+            tntt_only_count = sum(
+                1
+                for selection in request.class_selections
+                if selection.register_for_tntt
+                and not selection.giao_ly_level
+                and not selection.viet_ngu_level
+            )
+            viet_ngu_9_count = sum(
+                1
+                for selection in request.class_selections
+                if selection.viet_ngu_level == 9
+            )
+            calculated_amount_due = calculate_base_tuition(
+                enrolled_count,
+                family.diocese_id,
+                tntt_only_count=tntt_only_count,
+                viet_ngu_9_count=viet_ngu_9_count,
+            )
+            payment_result = await db.execute(
+                select(Payment).where(
+                    and_(Payment.family_id == family.id, Payment.school_year == academic_year_name)
+                )
+            )
+            payment = payment_result.scalar_one_or_none()
+            if payment:
+                payment.amount_due = calculated_amount_due
+                amount_paid = float(payment.amount_paid) if payment.amount_paid else 0.0
+                if amount_paid >= calculated_amount_due and calculated_amount_due > 0:
+                    payment.payment_status = PaymentStatus.PAID.value
+                elif amount_paid > 0:
+                    payment.payment_status = PaymentStatus.PARTIAL.value
+                else:
+                    payment.payment_status = PaymentStatus.UNPAID.value
+            else:
+                payment = Payment(
+                    family_id=family.id,
+                    school_year=academic_year_name,
+                    amount_due=calculated_amount_due,
+                    amount_paid=0,
+                    payment_status=PaymentStatus.UNPAID.value,
+                )
+                db.add(payment)
         
         # Commit all changes
         await db.commit()

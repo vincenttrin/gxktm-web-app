@@ -67,6 +67,7 @@ async def _recalculate_family_payments_for_years(
     for year_id in academic_year_ids:
         enrolled_count = 0
         tntt_only_count = 0
+        viet_ngu_9_count = 0
 
         for student in family.students:
             student_program_names: set[str] = set()
@@ -81,6 +82,8 @@ async def _recalculate_family_payments_for_years(
                 )
                 if program_name:
                     student_program_names.add(program_name)
+                if (class_obj.name or "").strip().lower() == "viet ngu 9":
+                    viet_ngu_9_count += 1
             is_enrolled = len(student_program_names) > 0
             if is_enrolled:
                 enrolled_count += 1
@@ -91,6 +94,7 @@ async def _recalculate_family_payments_for_years(
             enrolled_count,
             family.diocese_id,
             tntt_only_count=tntt_only_count,
+            viet_ngu_9_count=viet_ngu_9_count,
         )
         school_year_name = year_to_name.get(year_id)
         if not school_year_name:

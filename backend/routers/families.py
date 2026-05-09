@@ -217,6 +217,7 @@ async def get_families_with_payments(
         enrolled_class_count = 0
         enrolled_student_count = 0
         tntt_only_count = 0
+        viet_ngu_9_count = 0
         for student in family.students:
             student_enrollment_count = len(student.enrollments)
             enrolled_class_count += student_enrollment_count
@@ -229,6 +230,8 @@ async def get_families_with_payments(
                     if not class_obj or not class_obj.program:
                         continue
                     student_program_names.add(class_obj.program.name.strip().lower())
+                    if (class_obj.name or "").strip().lower() == "viet ngu 9":
+                        viet_ngu_9_count += 1
                 if student_program_names and all("tntt" in program_name for program_name in student_program_names):
                     tntt_only_count += 1
 
@@ -238,6 +241,7 @@ async def get_families_with_payments(
                 enrolled_student_count,
                 family.diocese_id,
                 tntt_only_count=tntt_only_count,
+                viet_ngu_9_count=viet_ngu_9_count,
             )
             payment_info = FamilyPaymentStatus(
                 payment_status=PaymentStatusEnum.UNPAID,

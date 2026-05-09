@@ -25,3 +25,8 @@ def test_calculate_base_tuition_mixed_tntt_only_and_standard_students():
     assert calculate_base_tuition(2, None, tntt_only_count=1) == 175.0
     # 1 TNTT-only student ($50) + 2 non-TNTT students (external diocese: 2 * $225)
     assert calculate_base_tuition(3, "nx001", tntt_only_count=1) == 500.0
+
+
+def test_calculate_base_tuition_viet_ngu_9_discount():
+    assert calculate_base_tuition(1, None, viet_ngu_9_count=1) == 90.0
+    assert calculate_base_tuition(2, "nx001", viet_ngu_9_count=2) == 380.0
