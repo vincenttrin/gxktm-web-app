@@ -1,0 +1,24 @@
+# fly.toml app configuration file generated for gxktm-web-app on 2026-05-18T15:37:16Z
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
+app = 'gxktm-web-app'
+primary_region = 'ord'
+
+[build]
+  args = { NEXT_PUBLIC_API_URL = 'https://gxktm-backend.fly.dev', NEXT_PUBLIC_CONTACT_EMAIL = 'Theresanganbl@gmail.com', NEXT_PUBLIC_HOME_URL = 'gxktm.org', NEXT_PUBLIC_SITE_URL = 'https://gxktm-web-app.fly.dev', NEXT_PUBLIC_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB3cnl0eGVtYmdhaGthenlkcmFjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczOTk1ODYsImV4cCI6MjA5Mjk3NTU4Nn0.5ZmbabHW1g8SyDMwK0_TYrhIVExm2HaqxD8S8GH63xs', NEXT_PUBLIC_SUPABASE_URL = 'https://pwrytxembgahkazydrac.supabase.co' }
+  dockerfile = 'Dockerfile'
+
+[http_service]
+  auto_start_machines = true
+  auto_stop_machines = true
+  concurrency = { hard_limit = 250, soft_limit = 200, type = 'requests' }
+  force_https = true
+  internal_port = 3000
+  min_machines_running = 1
+  processes = ['app']
+
+[[vm]]
+  memory = '512mb'
+  size = 'shared-cpu-1x'
