@@ -207,12 +207,22 @@ export default function PaymentList() {
 
   const handlePaymentClick = (family: EnrolledFamilyPayment) => {
     setSelectedFamily(family);
-    const calcTuition = (count: number, dioceseId?: string | null) => {
-      if (dioceseId && dioceseId.toLowerCase().includes('nx')) return count * 225;
+    const calcTuition = (count: number, dioceseId: string | null, tnttOnlyCount = 0) => {
+      const normalizedTnttOnlyCount = Math.max(0, tnttOnlyCount);
+      const nonTnttOnlyCount = Math.max(0, count - normalizedTnttOnlyCount);
+      const tnttOnlyTotal = normalizedTnttOnlyCount * 50;
+      if (nonTnttOnlyCount <= 0) return tnttOnlyTotal;
+      const normalizedDioceseId = (dioceseId || '').trim().toLowerCase();
+      if (normalizedDioceseId.includes('nx')) {
+        return tnttOnlyTotal + (nonTnttOnlyCount * 225);
+      }
       const schedule: Record<number, number> = { 1: 125, 2: 250, 3: 315 };
-      return count > 0 ? (schedule[count] ?? 375) : 0;
+      return tnttOnlyTotal + (schedule[nonTnttOnlyCount] ?? 375);
     };
-    setPaymentAmountDue(family.amount_due?.toString() || calcTuition(family.enrolled_count, family.diocese_id).toString());
+    setPaymentAmountDue(
+      family.amount_due?.toString() ||
+      calcTuition(family.enrolled_count, family.diocese_id, family.tntt_only_count ?? 0).toString()
+    );
     setPaymentAmountPaid(family.amount_paid?.toString() || '');
     setPaymentMethod('cash');
     setIsPaymentModalOpen(true);
@@ -455,11 +465,6 @@ export default function PaymentList() {
                           <h3 className="font-semibold text-gray-900">
                             {family.family_name || 'Unknown Family'}
                           </h3>
-                          {family.diocese_id && family.diocese_id.toLowerCase().includes('x') && (
-                            <span className="px-2 py-0.5 text-xs font-medium bg-purple-100 text-purple-700 rounded-full">
-                              External Diocese
-                            </span>
-                          )}
                         </div>
                         <p className="text-sm text-gray-500">
                           {family.guardians.map((g) => g.name).join(', ') || 'No guardians'}

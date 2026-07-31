@@ -15,12 +15,13 @@ import { DisplayYear } from './DashboardHeader';
 
 interface FamilyListProps {
   selectedYear: DisplayYear | null;
+  cachedFamilies: Family[];
+  onFamiliesChange: (families: Family[]) => void;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-export default function FamilyList({ selectedYear }: FamilyListProps) {
+export default function FamilyList({ selectedYear, cachedFamilies, onFamiliesChange }: FamilyListProps) {
   // Cached data
-  const [allFamilies, setAllFamilies] = useState<Family[]>([]);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -72,7 +73,7 @@ export default function FamilyList({ selectedYear }: FamilyListProps) {
     
     try {
       const families = await getAllFamilies();
-      setAllFamilies(families);
+      onFamiliesChange(families);
       setLastFetchTime(new Date());
       hasLoadedRef.current = true;
     } catch (err) {
@@ -82,27 +83,32 @@ export default function FamilyList({ selectedYear }: FamilyListProps) {
       setIsInitialLoading(false);
       setIsRefreshing(false);
     }
-  }, []);
+  }, [onFamiliesChange]);
 
   // Initial load
   useEffect(() => {
+    if (cachedFamilies.length > 0) {
+      hasLoadedRef.current = true;
+      setIsInitialLoading(false);
+      return;
+    }
     if (!hasLoadedRef.current) {
       loadAllFamilies();
     }
-  }, [loadAllFamilies]);
+  }, [cachedFamilies.length, loadAllFamilies]);
 
   // Client-side filtering with Vietnamese normalization
   const filteredFamilies = useMemo(() => {
-    if (!debouncedSearch) return allFamilies;
+    if (!debouncedSearch) return cachedFamilies;
     
     const normalizedQuery = normalizeVietnamese(debouncedSearch);
     
-    return allFamilies.filter(family => {
+    return cachedFamilies.filter(family => {
       const searchableText = getFamilySearchableText(family);
       const normalizedText = normalizeVietnamese(searchableText);
       return normalizedText.includes(normalizedQuery);
     });
-  }, [allFamilies, debouncedSearch]);
+  }, [cachedFamilies, debouncedSearch]);
 
   // Client-side sorting
   const sortedFamilies = useMemo(() => {
@@ -175,10 +181,10 @@ export default function FamilyList({ selectedYear }: FamilyListProps) {
 
   // Handle family update from detail modal - updates cache directly without refresh
   const handleFamilyDetailUpdate = (updatedFamily: Family) => {
-    setAllFamilies((prev) =>
-      prev.map((f) => (f.id === updatedFamily.id ? updatedFamily : f))
+    onFamiliesChange(
+      cachedFamilies.map((f) => (f.id === updatedFamily.id ? updatedFamily : f))
     );
-    // Also update viewingFamily to reflect changes
+    setLastFetchTime(new Date());
     setViewingFamily(updatedFamily);
   };
 

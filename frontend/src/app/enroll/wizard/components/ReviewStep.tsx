@@ -11,9 +11,14 @@ export function ReviewStep() {
   const { family, guardians, children, emergencyContacts, classSelections } = formState;
   const { t } = useTranslation();
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
-  
+  const [hasParentalConsent, setHasParentalConsent] = useState(false);
+
   const handleSubmit = async () => {
     setShowConfirmDialog(false);
+    if (!hasParentalConsent) {
+      setError('Parental consent is required before submitting the registration.');
+      return;
+    }
     if (!academicYear) {
       setError('No academic year configured. Please contact administration.');
       return;
@@ -70,6 +75,7 @@ export function ReviewStep() {
             viet_ngu_level: s.viet_ngu_level,
             giao_ly_completed: s.giao_ly_completed,
             viet_ngu_completed: s.viet_ngu_completed,
+            register_for_tntt: s.register_for_tntt,
           })),
         academic_year_id: academicYear.id,
       };
@@ -92,9 +98,9 @@ export function ReviewStep() {
   
   // Helper to get class selection summary for a child
   const getEnrollmentSummary = (studentId: string | undefined) => {
-    if (!studentId) return { giaoLy: null, vietNgu: null };
+    if (!studentId) return { giaoLy: null, vietNgu: null, tntt: false };
     const selection = classSelections.find(s => s.student_id === studentId);
-    if (!selection) return { giaoLy: null, vietNgu: null };
+    if (!selection) return { giaoLy: null, vietNgu: null, tntt: false };
     
     return {
       giaoLy: selection.giao_ly_completed 
@@ -107,6 +113,7 @@ export function ReviewStep() {
         : selection.viet_ngu_level 
           ? `Level ${selection.viet_ngu_level}` 
           : null,
+      tntt: selection.register_for_tntt,
     };
   };
   
@@ -262,7 +269,12 @@ export function ReviewStep() {
                         Việt Ngữ: {enrollment.vietNgu}
                       </span>
                     )}
-                    {!enrollment.giaoLy && !enrollment.vietNgu && (
+                    {enrollment.tntt && (
+                      <span className="inline-flex items-center rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-medium text-indigo-800">
+                        TNTT
+                      </span>
+                    )}
+                    {!enrollment.giaoLy && !enrollment.vietNgu && !enrollment.tntt && (
                       <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600">
                         {t('wizard.review.noEnrollment')}
                       </span>
@@ -321,6 +333,31 @@ export function ReviewStep() {
         </div>
       </div>
       
+      {/* Parental Consent */}
+      <div className="rounded-xl border border-amber-200 bg-amber-50 p-6">
+        <label className="flex items-start gap-3 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={hasParentalConsent}
+            onChange={(event) => setHasParentalConsent(event.target.checked)}
+            className="mt-1 h-4 w-4 rounded border-amber-300 text-amber-600 focus:ring-amber-500"
+          />
+          <div className="space-y-3 text-sm text-gray-800 leading-6">
+            <p>
+              I hereby grant permission for my child/children to participate in all KGD programs at Immaculate Heart of Mary Church. I am committed to supporting my child/children in adhering to all regulations, guidelines, and requirements established by KGD and the parish.
+            </p>
+            <p>
+              Tôi đồng ý cho con/em của tôi tham gia các chương trình của KGD tại Giáo xứ Trái Tim Vô Nhiễm Đức Mẹ. Tôi cam kết hỗ trợ và hướng dẫn con/em của tôi tuân thủ mọi nội quy, quy định và yêu cầu do KGD và giáo xứ đề ra.
+            </p>
+          </div>
+        </label>
+        {!hasParentalConsent && (
+          <p className="mt-3 text-sm font-medium text-amber-700">
+            {t('wizard.review.parentalConsentMessage')}
+          </p>
+        )}
+      </div>
+
       {/* Navigation */}
       <div className="flex items-center justify-between pt-4 border-t border-gray-200">
         <button
@@ -336,7 +373,7 @@ export function ReviewStep() {
         
         <button
           onClick={() => setShowConfirmDialog(true)}
-          disabled={isLoading || isSubmitting}
+          disabled={isLoading || isSubmitting || !hasParentalConsent}
           className="inline-flex items-center gap-2 rounded-lg bg-green-600 px-8 py-3 text-sm font-medium text-white shadow-sm hover:bg-green-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
         >
           {isSubmitting ? (
@@ -387,6 +424,7 @@ export function ReviewStep() {
               </button>
               <button
                 onClick={handleSubmit}
+                disabled={!hasParentalConsent}
                 className="inline-flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-green-500 transition-all"
               >
                 <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

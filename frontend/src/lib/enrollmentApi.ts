@@ -231,6 +231,7 @@ export interface EnrollmentSubmissionRequest {
     viet_ngu_level: number | null;
     giao_ly_completed: boolean;
     viet_ngu_completed: boolean;
+    register_for_tntt: boolean;
   }>;
   academic_year_id: number;
 }

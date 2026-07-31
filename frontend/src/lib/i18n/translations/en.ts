@@ -46,6 +46,7 @@ const en = {
       classes: 'Classes',
       payments: 'Payments',
       schoolYears: 'School Years',
+      adminEnrollment: 'Admin Enrollment',
       adminUsers: 'Admin Users',
     },
   },
@@ -216,6 +217,9 @@ const en = {
       programCompleted: '{program} — Completed (Level 9)',
       lockedSelection: 'Class automatically assigned based on previous enrollment.',
       graduatedNoEnrollment: 'This student has completed Level 9 and does not need to re-enroll in this program.',
+      tnttRegistration: 'Register for TNTT',
+      tnttDescription: 'Check to enroll this child in the TNTT program.',
+      tnttShort: 'TNTT',
     },
 
     // Review Step
@@ -239,6 +243,7 @@ const en = {
       existingFamilyNote: 'This will update your existing enrollment and replace any previous submission for this year.',
       newFamilyNote: 'This will create a new enrollment for your family.',
       confirmAndSubmit: 'Confirm & Submit',
+      parentalConsentMessage: 'Parental consent is required before you can submit this registration.',
     },
 
     // Confirmation Step
@@ -249,7 +254,6 @@ const en = {
       family: 'Family',
       tuitionSummary: 'Registration Fee',
       studentsEnrolled: '{count} student(s) enrolled',
-      externalDiocese: 'External Diocese',
       important: 'IMPORTANT',
       notFinalizedUntilPayment: 'Your enrollment is not finalized until payment is received.',
       acceptedPaymentMethods: 'We accept cash, checks, and Zelle.',
@@ -264,6 +268,8 @@ const en = {
       returnToHome: 'Return to Home',
       zelle: 'Pay with Zelle',
       zelleInstructions: 'Send payment to our Zelle account at {email}. Please include your family (or students\') name and "Tuition Payment" in the memo.',
+      printConfirmation: 'Print Receipt',
+
     },
   },
 } as const;

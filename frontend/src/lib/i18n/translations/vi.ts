@@ -48,6 +48,7 @@ const vi: TranslationKeys = {
       classes: 'Lớp Học',
       payments: 'Thanh Toán',
       schoolYears: 'Năm Học',
+      adminEnrollment: 'Ghi Danh Quản Trị',
       adminUsers: 'Quản Trị Viên',
     },
   },
@@ -218,6 +219,9 @@ const vi: TranslationKeys = {
       programCompleted: '{program} — Hoàn Thành (Lớp 9)',
       lockedSelection: 'Lớp được tự động chỉ định dựa trên ghi danh trước đó.',
       graduatedNoEnrollment: 'Học sinh đã hoàn thành Lớp 9 và không cần ghi danh lại chương trình này.',
+      tnttRegistration: 'Ghi danh TNTT',
+      tnttDescription: 'Đánh dấu để ghi danh học sinh này vào chương trình TNTT.',
+      tnttShort: 'TNTT',
     },
 
     // Review Step
@@ -241,6 +245,7 @@ const vi: TranslationKeys = {
       existingFamilyNote: 'Điều này sẽ cập nhật ghi danh hiện tại và thay thế bất kỳ đơn gửi trước đó cho năm này.',
       newFamilyNote: 'Điều này sẽ tạo đơn ghi danh mới cho gia đình bạn.',
       confirmAndSubmit: 'Xác Nhận & Gửi',
+      parentalConsentMessage: 'Cần có sự đồng ý của phụ huynh trước khi bạn có thể gửi đăng ký này.',
     },
 
     // Confirmation Step
@@ -251,7 +256,6 @@ const vi: TranslationKeys = {
       family: 'Gia đình',
       tuitionSummary: 'Phí Ghi Danh',
       studentsEnrolled: '{count} học sinh ghi danh',
-      externalDiocese: 'Giáo Phận Ngoài',
       important: 'QUAN TRỌNG',
       notFinalizedUntilPayment: 'Ghi danh chưa hoàn tất cho đến khi nhận được thanh toán.',
       acceptedPaymentMethods: 'Chúng tôi chấp nhận tiền mặt, chi phiếu (check), và Zelle.',
@@ -266,6 +270,7 @@ const vi: TranslationKeys = {
       returnToHome: 'Về Trang Chủ',
       zelle: 'Thanh toán qua Zelle',
       zelleInstructions: 'Gửi thanh toán đến tài khoản Zelle của chúng tôi tại {email}. Vui lòng bao gồm tên gia đình (hoặc tên học sinh) và "Thanh Toán Học Phí" trong phần memo.',
+      printConfirmation: 'In Biên Nhận',
     },
   },
 } as const;

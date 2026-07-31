@@ -157,6 +157,7 @@ export function ClassSelectionStep() {
         viet_ngu_level: vietNguLevel,
         giao_ly_completed: giaoLyCompleted,
         viet_ngu_completed: vietNguCompleted,
+        register_for_tntt: false,
       };
     });
   }, [children, classSelections, studentEnrollmentStatus, suggestedEnrollments]);
@@ -201,6 +202,14 @@ export function ClassSelectionStep() {
     updateClassSelections(updatedSelections);
   };
 
+  const handleTnttChange = (studentIndex: number, checked: boolean) => {
+    const updatedSelections = [...currentSelections];
+    const selection = { ...updatedSelections[studentIndex] };
+    selection.register_for_tntt = checked;
+    updatedSelections[studentIndex] = selection;
+    updateClassSelections(updatedSelections);
+  };
+
   // Allow continuing even if some students are not enrolling in any classes
   const canContinue = currentSelections.length === children.length;
 
@@ -235,6 +244,7 @@ export function ClassSelectionStep() {
             viet_ngu_level: null,
             giao_ly_completed: false,
             viet_ngu_completed: false,
+            register_for_tntt: false,
           };
 
           const status = child.id ? studentEnrollmentStatus[child.id] : undefined;
@@ -519,6 +529,25 @@ export function ClassSelectionStep() {
                     </div>
                   </div>
 
+                  <div className="mt-6 rounded-lg border border-indigo-200 bg-indigo-50 p-4">
+                    <label className="flex items-start gap-3">
+                      <input
+                        type="checkbox"
+                        checked={selection.register_for_tntt}
+                        onChange={(e) => handleTnttChange(index, e.target.checked)}
+                        className="mt-1 h-5 w-5 rounded border-indigo-300 text-indigo-600 focus:ring-indigo-500"
+                      />
+                      <div>
+                        <span className="font-semibold text-indigo-900">
+                          {t('wizard.classSelection.tnttRegistration')}
+                        </span>
+                        <p className="text-sm text-indigo-700">
+                          {t('wizard.classSelection.tnttDescription')}
+                        </p>
+                      </div>
+                    </label>
+                  </div>
+
                   {/* Enrollment Summary for this child */}
                   <div className="mt-4 pt-4 border-t border-gray-100">
                     <div className="flex items-center gap-2 text-sm text-gray-600">
@@ -536,10 +565,15 @@ export function ClassSelectionStep() {
                           {t('wizard.classSelection.vietNguLevel', { level: selection.viet_ngu_level })}
                         </span>
                       )}
-                      {!selection.giao_ly_level && !selection.viet_ngu_level && !selection.giao_ly_completed && !selection.viet_ngu_completed && (
+                      {selection.register_for_tntt && (
+                        <span className="inline-flex items-center rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-medium text-indigo-800">
+                          {t('wizard.classSelection.tnttShort')}
+                        </span>
+                      )}
+                      {!selection.giao_ly_level && !selection.viet_ngu_level && !selection.giao_ly_completed && !selection.viet_ngu_completed && !selection.register_for_tntt && (
                         <span className="text-gray-500">{t('wizard.classSelection.notEnrolling')}</span>
                       )}
-                      {(selection.giao_ly_completed || selection.viet_ngu_completed) && !selection.giao_ly_level && !selection.viet_ngu_level && (
+                      {(selection.giao_ly_completed || selection.viet_ngu_completed) && !selection.giao_ly_level && !selection.viet_ngu_level && !selection.register_for_tntt && (
                         <span className="text-gray-500">{t('wizard.classSelection.completedPrograms')}</span>
                       )}
                     </div>

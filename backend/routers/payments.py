@@ -39,6 +39,7 @@ from schemas import (
     StudentWithEnrollmentStatus,
     EnrolledClassInfo,
 )
+from utils.pricing import calculate_base_tuition
 
 router = APIRouter(prefix="/api/payments", tags=["payments"])
 
@@ -231,6 +232,8 @@ async def get_enrolled_families(
         # Build enriched student data with enrollment status
         students_with_status = []
         enrolled_count = 0
+        tntt_only_count = 0
+        viet_ngu_9_count = 0
         
         for student in family.students:
             # Find enrolled classes for this student in current year
@@ -248,12 +251,28 @@ async def get_enrolled_families(
             is_enrolled = len(student_enrolled_classes) > 0
             if is_enrolled:
                 enrolled_count += 1
+            is_tntt_only = (
+                is_enrolled
+                and len(student_enrolled_classes) > 0
+                and all(
+                    "tntt" in (enrolled_class.program_name or "").strip().lower()
+                    for enrolled_class in student_enrolled_classes
+                )
+            )
+            if is_tntt_only:
+                tntt_only_count += 1
+            if any(
+                (enrolled_class.name or "").strip().lower() == "viet ngu 9"
+                for enrolled_class in student_enrolled_classes
+            ):
+                viet_ngu_9_count += 1
             
             students_with_status.append(StudentWithEnrollmentStatus(
                 id=student.id,
                 first_name=student.first_name,
                 last_name=student.last_name,
                 is_enrolled=is_enrolled,
+                is_tntt_only=is_tntt_only,
                 enrolled_classes=student_enrolled_classes,
             ))
         
@@ -263,15 +282,15 @@ async def get_enrolled_families(
             None
         )
         
-        # Calculate amount_due: use existing payment amount_due, or calculate from enrollment
-        # External diocese (diocese_id contains 'nx') pays $225 per student, no discounts
-        # Regular families: 1=$125, 2=$250, 3=$315, 4+=$375
-        diocese_id = family.diocese_id or ""
-        if "nx" in diocese_id.lower():
-            calculated_amount_due = enrolled_count * 225.0
-        else:
-            TUITION_SCHEDULE = {1: 125.0, 2: 250.0, 3: 315.0}
-            calculated_amount_due = TUITION_SCHEDULE.get(enrolled_count, 375.0) if enrolled_count > 0 else 0.0
+        # Calculate amount_due: use existing payment amount_due, or calculate from enrollment.
+        # TNTT-only students are charged $50 each.
+        # Remaining students follow standard pricing (or external diocese nx pricing).
+        calculated_amount_due = calculate_base_tuition(
+            enrolled_count,
+            family.diocese_id,
+            tntt_only_count=tntt_only_count,
+            viet_ngu_9_count=viet_ngu_9_count,
+        )
         amount_due = float(payment.amount_due) if payment and payment.amount_due else calculated_amount_due
 
         enrolled_family_items.append(EnrolledFamilyPayment(
@@ -281,6 +300,7 @@ async def get_enrolled_families(
             guardians=[{"name": g.name} for g in family.guardians],
             students=students_with_status,
             enrolled_count=enrolled_count,
+            tntt_only_count=tntt_only_count,
             payment_id=payment.id if payment else None,
             payment_status=payment.payment_status if payment else "unpaid",
             amount_due=amount_due,

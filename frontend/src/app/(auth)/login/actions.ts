@@ -37,12 +37,18 @@ export async function signup(formData: FormData) {
 
   const email = formData.get('email') as string
   const password = formData.get('password') as string
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
+
+  if (password.length < 6) {
+    redirect('/signup?error=Password must be at least 6 characters')
+  }
 
   // New users default to 'user' role
   const { error } = await supabase.auth.signUp({
     email,
     password,
     options: {
+      emailRedirectTo: `${siteUrl}/auth/callback`,
       data: {
         role: 'user',
       },

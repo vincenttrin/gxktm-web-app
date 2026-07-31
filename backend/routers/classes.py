@@ -90,6 +90,9 @@ async def get_class(class_id: UUID, db: AsyncSession = Depends(get_db)):
     enrollments_with_family = []
     for enrollment in cls.enrollments:
         student = enrollment.student
+        if student is None:
+            continue
+
         family_name = student.family.family_name if student.family else None
         
         enrollments_with_family.append({
@@ -119,7 +122,7 @@ async def get_class(class_id: UUID, db: AsyncSession = Depends(get_db)):
         academic_year_id=cls.academic_year_id,
         program=ProgramResponse(id=cls.program.id, name=cls.program.name) if cls.program else None,
         enrollments=enrollments_with_family,
-        enrollment_count=len(cls.enrollments),
+        enrollment_count=len(enrollments_with_family),
     )
 
 

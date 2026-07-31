@@ -10,6 +10,12 @@ export function ConfirmationStep() {
   const { formState, academicYear } = state;
   const { family, children, classSelections } = formState;
 
+  const handlePrint = () => {
+    if (typeof window !== 'undefined') {
+      window.print();
+    }
+  };
+
   // Get enrollment summary
   const enrollmentSummary = children.map(child => {
     const selection = classSelections.find(s => s.student_id === child.id);
@@ -25,21 +31,37 @@ export function ConfirmationStep() {
         : selection?.viet_ngu_level
           ? `Level ${selection.viet_ngu_level}`
           : null,
+      tntt: selection?.register_for_tntt ?? false,
     };
   });
 
   // Calculate tuition fee — only count students actually enrolled in classes
   const enrolledCount = children.filter(child => {
     const selection = classSelections.find(s => s.student_id === child.id);
-    return selection && (selection.giao_ly_level !== null || selection.viet_ngu_level !== null);
+    return selection && (selection.giao_ly_level !== null || selection.viet_ngu_level !== null || selection.register_for_tntt);
   }).length;
-  const dioceseId = family.diocese_id || '';
-  const isExternalDiocese = dioceseId.toLowerCase().includes('nx');
+  const tnttOnlyCount = children.filter(child => {
+    const selection = classSelections.find(s => s.student_id === child.id);
+    return !!selection &&
+      selection.register_for_tntt &&
+      selection.giao_ly_level === null &&
+      selection.viet_ngu_level === null;
+  }).length;
+  const vietNgu9Count = children.filter(child => {
+    const selection = classSelections.find(s => s.student_id === child.id);
+    return !!selection && selection.viet_ngu_level === 9;
+  }).length;
   const tuitionFee = (() => {
     if (enrolledCount === 0) return 0;
-    if (isExternalDiocese) return enrolledCount * 225;
+    const nonTnttOnlyCount = Math.max(0, enrolledCount - tnttOnlyCount);
+    const tnttOnlyTotal = tnttOnlyCount * 50;
+    if (nonTnttOnlyCount <= 0) return tnttOnlyTotal;
+    const normalizedDioceseId = (family.diocese_id || '').trim().toLowerCase();
+    if (normalizedDioceseId.includes('nx')) {
+      return Math.max(0, tnttOnlyTotal + (nonTnttOnlyCount * 225) - (vietNgu9Count * 35));
+    }
     const schedule: Record<number, number> = { 1: 125, 2: 250, 3: 315 };
-    return schedule[enrolledCount] ?? 375;
+    return Math.max(0, tnttOnlyTotal + (schedule[nonTnttOnlyCount] ?? 375) - (vietNgu9Count * 35));
   })();
 
   return (
@@ -71,68 +93,6 @@ export function ConfirmationStep() {
             <p className="text-sm text-red-800 mt-2">
               {t('wizard.confirmation.refundPolicy')}
             </p>
-          </div>
-
-          {/* Enrollment Summary */}
-          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-            <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900">{t('wizard.confirmation.enrollmentSummary')}</h3>
-              <p className="text-sm text-gray-600 mt-1">
-                {t('wizard.confirmation.family')}: {family.family_name || 'Not specified'}
-              </p>
-            </div>
-
-            <div className="divide-y divide-gray-100">
-              {enrollmentSummary.map((student, index) => (
-                <div key={index} className="px-6 py-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
-                        <span className="text-green-600 font-medium text-sm">
-                          {student.name.split(' ').map(n => n[0]).join('')}
-                        </span>
-                      </div>
-                      <p className="font-medium text-gray-900">{student.name}</p>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {student.giaoLy && (
-                        <span className="inline-flex items-center rounded-full bg-amber-100 px-3 py-1 text-sm font-medium text-amber-800">
-                          Giáo Lý: {student.giaoLy}
-                        </span>
-                      )}
-                      {student.vietNgu && (
-                        <span className="inline-flex items-center rounded-full bg-blue-100 px-3 py-1 text-sm font-medium text-blue-800">
-                          Việt Ngữ: {student.vietNgu}
-                        </span>
-                      )}
-                      {!student.giaoLy && !student.vietNgu && (
-                        <span className="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-sm font-medium text-gray-600">
-                          {t('wizard.classSelection.notEnrolling')}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Tuition Fee Summary */}
-          <div className="bg-emerald-50 rounded-xl border border-emerald-200 p-6">
-            <h3 className="text-lg font-semibold text-emerald-900 mb-3">{t('wizard.confirmation.tuitionSummary')}</h3>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-emerald-800">
-                  {t('wizard.confirmation.studentsEnrolled', { count: enrolledCount })}
-                  {isExternalDiocese && (
-                    <span className="ml-2 inline-flex items-center rounded-full bg-purple-100 px-2.5 py-0.5 text-xs font-medium text-purple-800">
-                      {t('wizard.confirmation.externalDiocese')}
-                    </span>
-                  )}
-                </p>
-              </div>
-              <p className="text-2xl font-bold text-emerald-900">${tuitionFee.toFixed(2)}</p>
-            </div>
           </div>
 
           {/* What's Next */}
@@ -185,8 +145,80 @@ export function ConfirmationStep() {
             </div>
           </div>
 
+          {/* Enrollment Summary */}
+          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900">{t('wizard.confirmation.enrollmentSummary')}</h3>
+              <p className="text-sm text-gray-600 mt-1">
+                {t('wizard.confirmation.family')}: {family.family_name || 'Not specified'}
+              </p>
+            </div>
+
+            <div className="divide-y divide-gray-100">
+              {enrollmentSummary.map((student, index) => (
+                <div key={index} className="px-6 py-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
+                        <span className="text-green-600 font-medium text-sm">
+                          {student.name.split(' ').map(n => n[0]).join('')}
+                        </span>
+                      </div>
+                      <p className="font-medium text-gray-900">{student.name}</p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {student.giaoLy && (
+                        <span className="inline-flex items-center rounded-full bg-amber-100 px-3 py-1 text-sm font-medium text-amber-800">
+                          Giáo Lý: {student.giaoLy}
+                        </span>
+                      )}
+                      {student.vietNgu && (
+                        <span className="inline-flex items-center rounded-full bg-blue-100 px-3 py-1 text-sm font-medium text-blue-800">
+                          Việt Ngữ: {student.vietNgu}
+                        </span>
+                      )}
+                      {student.tntt && (
+                        <span className="inline-flex items-center rounded-full bg-indigo-100 px-3 py-1 text-sm font-medium text-indigo-800">
+                          TNTT
+                        </span>
+                      )}
+                      {!student.giaoLy && !student.vietNgu && !student.tntt && (
+                        <span className="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-sm font-medium text-gray-600">
+                          {t('wizard.classSelection.notEnrolling')}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Tuition Fee Summary */}
+          <div className="bg-emerald-50 rounded-xl border border-emerald-200 p-6">
+            <h3 className="text-lg font-semibold text-emerald-900 mb-3">{t('wizard.confirmation.tuitionSummary')}</h3>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-emerald-800">
+                  {t('wizard.confirmation.studentsEnrolled', { count: enrolledCount })}
+                </p>
+              </div>
+              <p className="text-2xl font-bold text-emerald-900">${tuitionFee.toFixed(2)}</p>
+            </div>
+          </div>
+
           {/* Action Button */}
-          <div className="flex justify-center pt-4">
+          <div className="flex flex-wrap justify-center gap-3 pt-4">
+            <button
+              type="button"
+              onClick={handlePrint}
+              className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-6 py-3 text-sm font-medium text-white shadow-sm hover:bg-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 transition-all"
+            >
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 9V4a1 1 0 011-1h10a1 1 0 011 1v5M6 14H5a2 2 0 01-2-2V9a2 2 0 012-2h14a2 2 0 012 2v3a2 2 0 01-2 2h-1M6 18h12v2a1 1 0 01-1 1H7a1 1 0 01-1-1v-2z" />
+              </svg>
+              {t('wizard.confirmation.printConfirmation')}
+            </button>
             <Link
               href={process.env.NEXT_PUBLIC_HOME_URL ? (process.env.NEXT_PUBLIC_HOME_URL.startsWith('http') ? process.env.NEXT_PUBLIC_HOME_URL : `https://${process.env.NEXT_PUBLIC_HOME_URL}`) : '/'}
               className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-8 py-3 text-sm font-medium text-white shadow-sm hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all"

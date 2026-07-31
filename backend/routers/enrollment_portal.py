@@ -21,7 +21,18 @@ import re
 logger = logging.getLogger(__name__)
 
 from database import get_db
-from models import Family, Guardian, Student, Enrollment, Class, AcademicYear, Program, EmergencyContact
+from models import (
+    Family,
+    Guardian,
+    Student,
+    Enrollment,
+    Class,
+    AcademicYear,
+    Program,
+    EmergencyContact,
+    Payment,
+    PaymentStatus,
+)
 from schemas import (
     FamilyResponse,
     ClassResponse,
@@ -30,6 +41,8 @@ from schemas import (
     EnrollmentSubmissionResponse,
 )
 from auth import get_current_user, UserInfo
+from utils.enrollment_notifications import send_enrollment_confirmation_email
+from utils.pricing import calculate_base_tuition
 
 router = APIRouter(prefix="/api/enrollment", tags=["enrollment"])
 
@@ -306,7 +319,11 @@ async def get_suggested_enrollments(
             selectinload(Family.students)
             .selectinload(Student.enrollments)
             .selectinload(Enrollment.assigned_class)
-            .selectinload(Class.program)
+            .selectinload(Class.program),
+            selectinload(Family.students)
+            .selectinload(Student.enrollments)
+            .selectinload(Enrollment.assigned_class)
+            .selectinload(Class.academic_year)
         )
         .where(Family.id == family_id)
     )
@@ -323,22 +340,59 @@ async def get_suggested_enrollments(
     for student in family.students:
         logger.warning(f"[suggested-enrollments] student={student.first_name} {student.last_name} (id={student.id}), total enrollments={len(student.enrollments)}")
 
-        # Get last year's enrollments (enrollments NOT in current year)
-        last_year_enrollments = [
+        # Get prior enrollments (enrollments NOT in current year)
+        prior_enrollments = [
             e for e in student.enrollments
             if e.assigned_class and e.assigned_class.academic_year_id != current_year.id
         ]
 
-        logger.warning(f"[suggested-enrollments]   last_year_enrollments count={len(last_year_enrollments)}")
+        logger.warning(f"[suggested-enrollments]   prior_enrollments count={len(prior_enrollments)}")
         for e in student.enrollments:
             cls = e.assigned_class
             logger.warning(f"[suggested-enrollments]   enrollment: class={cls.name if cls else 'None'}, academic_year_id={cls.academic_year_id if cls else 'None'}, matches_current={cls.academic_year_id == current_year.id if cls else 'N/A'}")
 
-        is_currently_enrolled = len(last_year_enrollments) > 0
+        is_currently_enrolled = len(prior_enrollments) > 0
         completed_programs = []
         suggested_classes = []
+        latest_enrollment_by_program: dict[int, Enrollment] = {}
 
-        for enrollment in last_year_enrollments:
+        # Keep only the latest prior enrollment per program.
+        # This ensures progression is based on the student's most recent class in that program.
+        for enrollment in prior_enrollments:
+            old_class = enrollment.assigned_class
+            if not old_class:
+                continue
+            if old_class.program_id is None:
+                continue
+
+            previous = latest_enrollment_by_program.get(old_class.program_id)
+            if not previous or not previous.assigned_class:
+                latest_enrollment_by_program[old_class.program_id] = enrollment
+                continue
+
+            previous_class = previous.assigned_class
+            previous_year_sort = (
+                previous_class.academic_year.start_year
+                if previous_class.academic_year and previous_class.academic_year.start_year is not None
+                else previous_class.academic_year_id
+                if previous_class.academic_year_id is not None
+                else -1
+            )
+            current_year_sort = (
+                old_class.academic_year.start_year
+                if old_class.academic_year and old_class.academic_year.start_year is not None
+                else old_class.academic_year_id
+                if old_class.academic_year_id is not None
+                else -1
+            )
+            previous_level = parse_class_level(previous_class.name) or -1
+            current_level = parse_class_level(old_class.name) or -1
+
+            # Prefer newer academic year; if same year, prefer higher level.
+            if (current_year_sort, current_level) > (previous_year_sort, previous_level):
+                latest_enrollment_by_program[old_class.program_id] = enrollment
+
+        for enrollment in latest_enrollment_by_program.values():
             old_class = enrollment.assigned_class
             if not old_class:
                 continue
@@ -445,6 +499,7 @@ async def submit_enrollment(
     
     try:
         enrollment_ids = []
+        academic_year_name = str(request.academic_year_id)
         
         # 1. Handle Family
         if request.family_id:
@@ -635,6 +690,14 @@ async def submit_enrollment(
                     await db.delete(ec_to_del)
         
         # 5. Handle Class Enrollments
+        academic_year_result = await db.execute(
+            select(AcademicYear).where(AcademicYear.id == request.academic_year_id)
+        )
+        academic_year = academic_year_result.scalar_one_or_none()
+        if not academic_year:
+            raise HTTPException(status_code=404, detail="Academic year not found")
+        academic_year_name = academic_year.name
+
         # First, delete existing enrollments for this academic year
         # Get all classes for the current academic year
         classes_result = await db.execute(
@@ -647,6 +710,10 @@ async def submit_enrollment(
         # Build program name to class map for level lookup
         giao_ly_classes = {}
         viet_ngu_classes = {}
+        giao_ly_class_names = {}
+        viet_ngu_class_names = {}
+        tntt_class_id: Optional[UUID] = None
+        tntt_class_name: Optional[str] = None
         for cls in current_year_classes:
             if cls.program:
                 level = parse_class_level(cls.name)
@@ -654,8 +721,17 @@ async def submit_enrollment(
                 if level:
                     if "giao ly" in program_name or "giáo lý" in program_name:
                         giao_ly_classes[level] = cls.id
+                        giao_ly_class_names[level] = cls.name
                     elif "viet ngu" in program_name or "việt ngữ" in program_name:
                         viet_ngu_classes[level] = cls.id
+                        viet_ngu_class_names[level] = cls.name
+                if (
+                    "tntt" in program_name
+                    and cls.name.strip().lower() == "tntt"
+                    and tntt_class_id is None
+                ):
+                    tntt_class_id = cls.id
+                    tntt_class_name = cls.name
         
         if not giao_ly_classes and not viet_ngu_classes:
             logger.warning(
@@ -710,9 +786,144 @@ async def submit_enrollment(
                 )
                 db.add(enrollment)
                 enrollment_ids.append(enrollment.id)
+
+            if selection.register_for_tntt:
+                if tntt_class_id:
+                    enrollment = Enrollment(
+                        id=uuid4(),
+                        student_id=student_id,
+                        class_id=tntt_class_id,
+                    )
+                    db.add(enrollment)
+                    enrollment_ids.append(enrollment.id)
+                else:
+                    logger.warning(
+                        "TNTT enrollment requested but TNTT class not found for academic year %s",
+                        request.academic_year_id,
+                    )
+
+        enrolled_count = sum(
+            1
+            for selection in request.class_selections
+            if selection.giao_ly_level or selection.viet_ngu_level or selection.register_for_tntt
+        )
+        if enrolled_count > 0:
+            tntt_only_count = sum(
+                1
+                for selection in request.class_selections
+                if selection.register_for_tntt
+                and not selection.giao_ly_level
+                and not selection.viet_ngu_level
+            )
+            viet_ngu_9_count = sum(
+                1
+                for selection in request.class_selections
+                if selection.viet_ngu_level == 9
+            )
+            calculated_amount_due = calculate_base_tuition(
+                enrolled_count,
+                family.diocese_id,
+                tntt_only_count=tntt_only_count,
+                viet_ngu_9_count=viet_ngu_9_count,
+            )
+            payment_result = await db.execute(
+                select(Payment).where(
+                    and_(Payment.family_id == family.id, Payment.school_year == academic_year_name)
+                )
+            )
+            payment = payment_result.scalar_one_or_none()
+            if payment:
+                payment.amount_due = calculated_amount_due
+                amount_paid = float(payment.amount_paid) if payment.amount_paid else 0.0
+                if amount_paid >= calculated_amount_due and calculated_amount_due > 0:
+                    payment.payment_status = PaymentStatus.PAID.value
+                elif amount_paid > 0:
+                    payment.payment_status = PaymentStatus.PARTIAL.value
+                else:
+                    payment.payment_status = PaymentStatus.UNPAID.value
+            else:
+                payment = Payment(
+                    family_id=family.id,
+                    school_year=academic_year_name,
+                    amount_due=calculated_amount_due,
+                    amount_paid=0,
+                    payment_status=PaymentStatus.UNPAID.value,
+                )
+                db.add(payment)
         
         # Commit all changes
         await db.commit()
+
+        # Best-effort confirmation email. Enrollment success should not depend on
+        # downstream email availability.
+        guardian_emails = [g.email for g in request.guardians if g.email]
+        selections_by_student_id = {
+            selection.student_id: selection
+            for selection in request.class_selections
+        }
+        student_summaries = []
+        for student in request.students:
+            selection = selections_by_student_id.get(student.id or "")
+            courses = []
+
+            if selection and selection.giao_ly_level:
+                courses.append(
+                    giao_ly_class_names.get(
+                        selection.giao_ly_level,
+                        f"Giáo Lý {selection.giao_ly_level}",
+                    )
+                )
+
+            if selection and selection.viet_ngu_level:
+                courses.append(
+                    viet_ngu_class_names.get(
+                        selection.viet_ngu_level,
+                        f"Việt Ngữ {selection.viet_ngu_level}",
+                    )
+                )
+            if selection and selection.register_for_tntt:
+                courses.append(tntt_class_name or "TNTT")
+
+            # Only include students with course selections in the email summary
+            if courses:
+                student_summaries.append(
+                    {
+                        "id": student.id,
+                        "first_name": student.first_name,
+                        "last_name": student.last_name,
+                        "vietnamese_name": student.vietnamese_name,
+                        "courses": courses,
+                    }
+                )
+        class_selection_summaries = [
+            {
+                "student_id": selection.student_id,
+                "giao_ly_level": selection.giao_ly_level,
+                "giao_ly_class_name": giao_ly_class_names.get(selection.giao_ly_level)
+                if selection.giao_ly_level
+                else None,
+                "viet_ngu_level": selection.viet_ngu_level,
+                "viet_ngu_class_name": viet_ngu_class_names.get(selection.viet_ngu_level)
+                if selection.viet_ngu_level
+                else None,
+                "giao_ly_completed": selection.giao_ly_completed,
+                "viet_ngu_completed": selection.viet_ngu_completed,
+                "register_for_tntt": selection.register_for_tntt,
+            }
+            for selection in request.class_selections
+        ]
+        email_sent = await send_enrollment_confirmation_email(
+            recipient_emails=guardian_emails,
+            family_name=request.family_info.family_name,
+            academic_year_name=academic_year_name,
+            students=student_summaries,
+            class_selections=class_selection_summaries,
+        )
+        if not email_sent:
+            logger.warning(
+                "Enrollment confirmation email was not sent for family_id=%s",
+                family.id,
+            )
         
         return EnrollmentSubmissionResponse(
             success=True,

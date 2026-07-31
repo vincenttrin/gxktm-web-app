@@ -1,9 +1,13 @@
+import logging
 import os
-from fastapi import FastAPI, Depends
+import socket
+from fastapi import FastAPI, Depends, Request
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
+from sqlalchemy.exc import SQLAlchemyError
 
 from database import get_db
 from models import Program, Student, Enrollment, Family
@@ -18,6 +22,7 @@ from routers.admin_users import router as admin_users_router
 
 
 app = FastAPI(title="Sunday School Admin API", version="1.0.0")
+logger = logging.getLogger(__name__)
 
 # --- 1. SETUP CORS ---
 # This allows your Next.js app (http://localhost:3000) to talk to this API
@@ -42,6 +47,24 @@ app.include_router(enrollments_router)
 app.include_router(enrollment_portal_router)
 app.include_router(school_years_router)
 app.include_router(admin_users_router)
+
+
+@app.exception_handler(SQLAlchemyError)
+async def sqlalchemy_error_handler(request: Request, exc: SQLAlchemyError):
+    logger.exception("Database error while handling %s", request.url.path, exc_info=exc)
+    return JSONResponse(
+        status_code=503,
+        content={"detail": "Database temporarily unavailable"},
+    )
+
+
+@app.exception_handler(socket.gaierror)
+async def dns_error_handler(request: Request, exc: socket.gaierror):
+    logger.exception("Database hostname resolution failed while handling %s", request.url.path, exc_info=exc)
+    return JSONResponse(
+        status_code=503,
+        content={"detail": "Database hostname could not be resolved"},
+    )
 
 
 @app.get("/")
