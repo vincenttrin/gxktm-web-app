@@ -10,6 +10,12 @@ export function ConfirmationStep() {
   const { formState, academicYear } = state;
   const { family, children, classSelections } = formState;
 
+  const handlePrint = () => {
+    if (typeof window !== 'undefined') {
+      window.print();
+    }
+  };
+
   // Get enrollment summary
   const enrollmentSummary = children.map(child => {
     const selection = classSelections.find(s => s.student_id === child.id);
@@ -89,6 +95,56 @@ export function ConfirmationStep() {
             </p>
           </div>
 
+          {/* What's Next */}
+          <div className="bg-blue-50 rounded-xl border border-blue-200 p-6">
+            <h3 className="text-lg font-semibold text-blue-900 mb-4">{t('wizard.confirmation.whatsNext')}</h3>
+            <ul className="space-y-3">
+              <li className="flex items-start gap-3">
+                <div className="h-6 w-6 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <span className="text-white text-xs font-bold">1</span>
+                </div>
+                <p className="text-sm text-blue-800">
+                  <span className="font-medium">{t('wizard.confirmation.completePayment')}</span> {t('wizard.confirmation.completePaymentDesc')}
+                </p>
+              </li>
+              <li className="flex items-start gap-3">
+                <div className="h-6 w-6 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <span className="text-white text-xs font-bold">2</span>
+                </div>
+                <p className="text-sm text-blue-800">
+                  <span className="font-medium">{t('wizard.confirmation.markCalendar')}</span> {t('wizard.confirmation.markCalendarDesc')}
+                </p>
+              </li>
+            </ul>
+          </div>
+
+          {/* Zelle Instructions */}
+          <div className="bg-purple-50 rounded-xl border border-purple-200 p-6">
+            <h3 className="text-lg font-semibold text-purple-900 mb-4">{t('wizard.confirmation.zelle')}</h3>
+            <p className="text-sm text-purple-800">
+              {t('wizard.confirmation.zelleInstructions', { email: 'khoigiaoduc3@gmail.com' })}
+            </p>
+          </div>
+
+          {/* Contact Information */}
+          <div className="bg-gray-50 rounded-xl border border-gray-200 p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-3">{t('wizard.confirmation.questions')}</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              {t('wizard.confirmation.questionsDesc')}
+            </p>
+            <div className="flex flex-wrap gap-4">
+              <a
+                href={`mailto:${process.env.NEXT_PUBLIC_CONTACT_EMAIL || 'giaoxukinhthanh@gmail.com'}`}
+                className="inline-flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-700"
+              >
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                {process.env.NEXT_PUBLIC_CONTACT_EMAIL || 'giaoxukinhthanh@gmail.com'}
+              </a>
+            </div>
+          </div>
+
           {/* Enrollment Summary */}
           <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
             <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
@@ -151,58 +207,18 @@ export function ConfirmationStep() {
             </div>
           </div>
 
-          {/* What's Next */}
-          <div className="bg-blue-50 rounded-xl border border-blue-200 p-6">
-            <h3 className="text-lg font-semibold text-blue-900 mb-4">{t('wizard.confirmation.whatsNext')}</h3>
-            <ul className="space-y-3">
-              <li className="flex items-start gap-3">
-                <div className="h-6 w-6 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <span className="text-white text-xs font-bold">1</span>
-                </div>
-                <p className="text-sm text-blue-800">
-                  <span className="font-medium">{t('wizard.confirmation.completePayment')}</span> {t('wizard.confirmation.completePaymentDesc')}
-                </p>
-              </li>
-              <li className="flex items-start gap-3">
-                <div className="h-6 w-6 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <span className="text-white text-xs font-bold">2</span>
-                </div>
-                <p className="text-sm text-blue-800">
-                  <span className="font-medium">{t('wizard.confirmation.markCalendar')}</span> {t('wizard.confirmation.markCalendarDesc')}
-                </p>
-              </li>
-            </ul>
-          </div>
-
-          {/* Zelle Instructions */}
-          <div className="bg-purple-50 rounded-xl border border-purple-200 p-6">
-            <h3 className="text-lg font-semibold text-purple-900 mb-4">{t('wizard.confirmation.zelle')}</h3>
-            <p className="text-sm text-purple-800">
-              {t('wizard.confirmation.zelleInstructions', { email: 'khoigiaoduc3@gmail.com' })}
-            </p>
-          </div>
-
-          {/* Contact Information */}
-          <div className="bg-gray-50 rounded-xl border border-gray-200 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-3">{t('wizard.confirmation.questions')}</h3>
-            <p className="text-sm text-gray-600 mb-4">
-              {t('wizard.confirmation.questionsDesc')}
-            </p>
-            <div className="flex flex-wrap gap-4">
-              <a
-                href={`mailto:${process.env.NEXT_PUBLIC_CONTACT_EMAIL || 'giaoxukinhthanh@gmail.com'}`}
-                className="inline-flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-700"
-              >
-                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                </svg>
-                {process.env.NEXT_PUBLIC_CONTACT_EMAIL || 'giaoxukinhthanh@gmail.com'}
-              </a>
-            </div>
-          </div>
-
           {/* Action Button */}
-          <div className="flex justify-center pt-4">
+          <div className="flex flex-wrap justify-center gap-3 pt-4">
+            <button
+              type="button"
+              onClick={handlePrint}
+              className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-6 py-3 text-sm font-medium text-white shadow-sm hover:bg-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 transition-all"
+            >
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 9V4a1 1 0 011-1h10a1 1 0 011 1v5M6 14H5a2 2 0 01-2-2V9a2 2 0 012-2h14a2 2 0 012 2v3a2 2 0 01-2 2h-1M6 18h12v2a1 1 0 01-1 1H7a1 1 0 01-1-1v-2z" />
+              </svg>
+              {t('wizard.confirmation.printConfirmation')}
+            </button>
             <Link
               href={process.env.NEXT_PUBLIC_HOME_URL ? (process.env.NEXT_PUBLIC_HOME_URL.startsWith('http') ? process.env.NEXT_PUBLIC_HOME_URL : `https://${process.env.NEXT_PUBLIC_HOME_URL}`) : '/'}
               className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-8 py-3 text-sm font-medium text-white shadow-sm hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all"

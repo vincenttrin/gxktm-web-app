@@ -268,6 +268,8 @@ const en = {
       returnToHome: 'Return to Home',
       zelle: 'Pay with Zelle',
       zelleInstructions: 'Send payment to our Zelle account at {email}. Please include your family (or students\') name and "Tuition Payment" in the memo.',
+      printConfirmation: 'Print Receipt',
+
     },
   },
 } as const;

@@ -270,6 +270,7 @@ const vi: TranslationKeys = {
       returnToHome: 'Về Trang Chủ',
       zelle: 'Thanh toán qua Zelle',
       zelleInstructions: 'Gửi thanh toán đến tài khoản Zelle của chúng tôi tại {email}. Vui lòng bao gồm tên gia đình (hoặc tên học sinh) và "Thanh Toán Học Phí" trong phần memo.',
+      printConfirmation: 'In Biên Nhận',
     },
   },
 } as const;

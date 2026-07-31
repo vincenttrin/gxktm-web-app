@@ -92,6 +92,7 @@ export default function AdminEnrollmentTab({ cachedFamilies }: AdminEnrollmentTa
   const [classSelections, setClassSelections] = useState<ClassSelection[]>([]);
   const [isLoadingFamilyData, setIsLoadingFamilyData] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSummaryOpen, setIsSummaryOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
@@ -210,6 +211,75 @@ export default function AdminEnrollmentTab({ cachedFamilies }: AdminEnrollmentTa
       suggestedData.suggested_enrollments.map((entry) => [entry.student_id, entry])
     );
   }, [suggestedData]);
+
+  const enrollmentSummary = useMemo(() => {
+    if (!familyData) return [];
+    return familyData.students.map((student) => {
+      const selection = classSelections.find((item) => item.student_id === student.id);
+      return {
+        id: student.id,
+        name: `${student.first_name} ${student.last_name}`.trim(),
+        giaoLy: selection?.giao_ly_completed
+          ? 'Completed'
+          : selection?.giao_ly_level
+            ? `Level ${selection.giao_ly_level}`
+            : null,
+        vietNgu: selection?.viet_ngu_completed
+          ? 'Completed'
+          : selection?.viet_ngu_level
+            ? `Level ${selection.viet_ngu_level}`
+            : null,
+        tntt: selection?.register_for_tntt ?? false,
+      };
+    });
+  }, [classSelections, familyData]);
+
+  const tuitionSummary = useMemo(() => {
+    if (!familyData) {
+      return { enrolledCount: 0, tuitionFee: 0 };
+    }
+    const enrolledCount = familyData.students.filter((student) => {
+      const selection = classSelections.find((item) => item.student_id === student.id);
+      return (
+        selection &&
+        (selection.giao_ly_level !== null ||
+          selection.viet_ngu_level !== null ||
+          selection.register_for_tntt)
+      );
+    }).length;
+    const tnttOnlyCount = familyData.students.filter((student) => {
+      const selection = classSelections.find((item) => item.student_id === student.id);
+      return (
+        !!selection &&
+        selection.register_for_tntt &&
+        selection.giao_ly_level === null &&
+        selection.viet_ngu_level === null
+      );
+    }).length;
+    const vietNgu9Count = familyData.students.filter((student) => {
+      const selection = classSelections.find((item) => item.student_id === student.id);
+      return !!selection && selection.viet_ngu_level === 9;
+    }).length;
+    const tuitionFee = (() => {
+      if (enrolledCount === 0) return 0;
+      const nonTnttOnlyCount = Math.max(0, enrolledCount - tnttOnlyCount);
+      const tnttOnlyTotal = tnttOnlyCount * 50;
+      if (nonTnttOnlyCount <= 0) return tnttOnlyTotal;
+      const normalizedDioceseId = (familyData.diocese_id || '').trim().toLowerCase();
+      if (normalizedDioceseId.includes('nx')) {
+        return Math.max(0, tnttOnlyTotal + nonTnttOnlyCount * 225 - vietNgu9Count * 35);
+      }
+      const schedule: Record<number, number> = { 1: 125, 2: 250, 3: 315 };
+      return Math.max(0, tnttOnlyTotal + (schedule[nonTnttOnlyCount] ?? 375) - vietNgu9Count * 35);
+    })();
+    return { enrolledCount, tuitionFee };
+  }, [classSelections, familyData]);
+
+  const handlePrintSummary = () => {
+    if (typeof window !== 'undefined') {
+      window.print();
+    }
+  };
 
   return (
     <div className="p-6 space-y-6">
@@ -436,7 +506,15 @@ export default function AdminEnrollmentTab({ cachedFamilies }: AdminEnrollmentTa
             );
           })}
 
-          <div className="flex justify-end">
+          <div className="flex flex-wrap justify-end gap-3">
+            <button
+              type="button"
+              onClick={() => setIsSummaryOpen(true)}
+              disabled={classSelections.length === 0}
+              className="px-4 py-2.5 rounded-lg border border-emerald-200 text-emerald-700 font-medium hover:bg-emerald-50 disabled:opacity-60"
+            >
+              View Summary
+            </button>
             <button
               onClick={handleSubmit}
               disabled={isSubmitting || classSelections.length === 0}
@@ -444,6 +522,106 @@ export default function AdminEnrollmentTab({ cachedFamilies }: AdminEnrollmentTa
             >
               {isSubmitting ? 'Submitting...' : 'Submit Enrollment'}
             </button>
+          </div>
+        </div>
+      )}
+
+      {isSummaryOpen && familyData && suggestedData && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="relative w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-2xl bg-white shadow-2xl">
+            <div className="border-b border-gray-200 px-6 py-4">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h3 className="text-xl font-semibold text-gray-900">Enrollment Summary</h3>
+                  <p className="text-sm text-gray-600 mt-1">
+                    {familyData.family_name || '(Unnamed family)'} · {suggestedData.academic_year_name}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsSummaryOpen(false)}
+                  className="text-sm text-gray-500 hover:text-gray-700"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+
+            <div className="space-y-6 p-6">
+              <div className="rounded-xl border border-gray-200 overflow-hidden">
+                <div className="bg-gray-50 px-4 py-3 border-b border-gray-200">
+                  <h4 className="text-sm font-semibold text-gray-900">Courses Registered</h4>
+                </div>
+                <div className="divide-y divide-gray-100">
+                  {enrollmentSummary.map((student) => (
+                    <div key={student.id} className="px-4 py-4">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <p className="font-medium text-gray-900">{student.name}</p>
+                        <div className="flex flex-wrap gap-2">
+                          {student.giaoLy && (
+                            <span className="inline-flex items-center rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-800">
+                              Giao Ly: {student.giaoLy}
+                            </span>
+                          )}
+                          {student.vietNgu && (
+                            <span className="inline-flex items-center rounded-full bg-blue-100 px-3 py-1 text-xs font-medium text-blue-800">
+                              Viet Ngu: {student.vietNgu}
+                            </span>
+                          )}
+                          {student.tntt && (
+                            <span className="inline-flex items-center rounded-full bg-indigo-100 px-3 py-1 text-xs font-medium text-indigo-800">
+                              TNTT
+                            </span>
+                          )}
+                          {!student.giaoLy && !student.vietNgu && !student.tntt && (
+                            <span className="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-600">
+                              Not enrolling
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-5 py-4">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <p className="text-sm text-emerald-800">Students enrolled</p>
+                    <p className="text-lg font-semibold text-emerald-900">
+                      {tuitionSummary.enrolledCount}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm text-emerald-800">Amount owed</p>
+                    <p className="text-2xl font-bold text-emerald-900">
+                      ${tuitionSummary.tuitionFee.toFixed(2)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap justify-end gap-3 border-t border-gray-200 px-6 py-4">
+              <button
+                type="button"
+                onClick={handlePrintSummary}
+                className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500"
+              >
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 9V4a1 1 0 011-1h10a1 1 0 011 1v5M6 14H5a2 2 0 01-2-2V9a2 2 0 012-2h14a2 2 0 012 2v3a2 2 0 01-2 2h-1M6 18h12v2a1 1 0 01-1 1H7a1 1 0 01-1-1v-2z" />
+                </svg>
+                Print
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsSummaryOpen(false)}
+                className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                Done
+              </button>
+            </div>
           </div>
         </div>
       )}
